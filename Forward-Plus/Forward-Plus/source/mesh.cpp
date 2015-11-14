@@ -79,7 +79,7 @@ void Mesh::InitMesh(unsigned int index, const aiMesh* paiMesh) {
 	m_Entries[index].Init(vertices, indices);
 }
 
-// TODO: Need to test render function
+// TODO: Just basic rendering. Needs to be built into shader pipeline?
 void Mesh::Render() {
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
