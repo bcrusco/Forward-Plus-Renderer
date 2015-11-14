@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include <glm\glm.hpp>
+#include "SOIL.h"
 
 using namespace std;
 
@@ -19,6 +20,10 @@ GLuint gBufCol = 0;
 GLuint gBufSiz = 0;
 
 void initGLFW(int argc, char* argv[]);
+
+void initShaders();
+
+GLuint loadTexture(GLchar* imagepath);
 
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
