@@ -45,7 +45,10 @@ void initGLFW(int argc, char* argv[]) {
 }
 
 void initShaders() {
+	// sets up all the different shaders we need.
+	// need at least: blinn phong, ambient, shadow map ones, compute for light culling, and light acumulation
 
+	// then do camera setup
 }
 
 GLuint loadTexture(GLchar* imagepath) {
