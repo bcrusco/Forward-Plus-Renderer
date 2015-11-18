@@ -1,131 +1,96 @@
 #include "mesh.h"
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
 
-//Reference : http://ogldev.atspace.co.uk/www/tutorial22/tutorial22.html
+// Based on: https://github.com/JoeyDeVries/LearnOpenGL/blob/master/includes/learnopengl/mesh.h
 
-Mesh::MeshEntry::MeshEntry() {
-	numIndices = 0;
-};
+Mesh::Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures) {
+	this->vertices = vertices;
+	this->indices = indices;
+	this->textures = textures;
 
-Mesh::MeshEntry::~MeshEntry() {
-	glDeleteBuffers(1, &vb);
-	glDeleteBuffers(1, &ib);
+	// Set vertex buffers and attribute pointers
+	this->SetupMesh();
 }
 
-void Mesh::MeshEntry::Init(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
-	numIndices = static_cast<unsigned int>(indices.size());
+void Mesh::Draw(Shader shader) {
+	// Bind appropriate textures
+	GLuint diffuseNumber = 1;
+	GLuint specularNumber = 1;
+	GLuint normalNumber = 1;
+	GLuint heightNumber = 1;
 
-	glGenBuffers(1, &vb);
-	glBindBuffer(GL_ARRAY_BUFFER, vb);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+	for (GLuint i = 0; i < this->textures.size(); i++) {
+		// Activate proper texture unit and retreive texture number
+		glActiveTexture(GL_TEXTURE0 + i);
+		stringstream stream;
+		string number;
+		string name = this->textures[i].type;
 
-	glGenBuffers(1, &ib);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * numIndices, &indices[0], GL_STATIC_DRAW);
-}
+		// Transfer texture data to stream
+		if (name == "texture_diffuse") {
+			stream << diffuseNumber++;
+		}
+		else if (name == "texture_specular") {
+			stream << specularNumber++;
+		}
+		else if (name == "texture_normal") {
+			stream << normalNumber++;
+		}
+		else if (name == "texture_height") {
+			stream << heightNumber++;
+		}
+		number = stream.str();
 
-void Mesh::Clear() {
-	// TODO: Implement. Needed for if we want to overwrite the existing mesh
-}
+		// Set sampler to the correct texture unit and bind the texture
+		glUniform1i(glGetUniformLocation(shader.Program, (name + number).c_str()), i);
+		glBindTexture(GL_TEXTURE_2D, this->textures[i].id);
+	}
 
-void Mesh::LoadMesh(const std::string& filename) {
-	// Release the previously loaded mesh
-	Clear();
+	// Draw mesh
+	glBindVertexArray(this->VAO);
+	glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 
-	// How mesh is read from file can be changed to match requirements
-	Assimp::Importer importer;
-	const aiScene* pScene = importer.ReadFile(filename.c_str(), aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
-	InitFromScene(pScene);
-}
-
-void Mesh::InitFromScene(const aiScene* pScene) {
-	m_Entries.resize(pScene->mNumMeshes);
-
-	// Initialize each mesh in the scene
-	for (unsigned int i = 0; i < m_Entries.size(); i++) {
-		const aiMesh* paiMesh = pScene->mMeshes[i];
-		InitMesh(i, paiMesh);
+	// Reset to defaults
+	for (GLuint i = 0; i < this->textures.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
 
-void Mesh::InitMesh(unsigned int index, const aiMesh* paiMesh) {
-	std::vector<Vertex> vertices;
-	std::vector<unsigned int> indices;
+void Mesh::SetupMesh() {
+	// Create buffers and arrays
+	glGenVertexArrays(1, &this->VAO);
+	glGenBuffers(1, &this->VBO);
+	glGenBuffers(1, &this->EBO);
 
-	const aiVector3D zero3D(0.0f, 0.0f, 0.0f);
+	glBindVertexArray(this->VAO);
+	// Load data into vertex buffers
+	glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+	glBufferData(GL_ARRAY_BUFFER, this->vertices.size() * sizeof(Vertex), &this->vertices[0], GL_STATIC_DRAW);
 
-	for (unsigned int i = 0; i < paiMesh->mNumVertices; i++) {
-		const aiVector3D* pPos = &(paiMesh->mVertices[i]);
-		const aiVector3D* pNormal = paiMesh->HasNormals() ? &(paiMesh->mNormals[i]) : &zero3D;
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(GLuint), &this->indices[0], GL_STATIC_DRAW);
 
-		Vertex v(glm::vec3(pPos->x, pPos->y, pPos->z),
-			glm::vec3(pNormal->x, pNormal->y, pNormal->z));
-
-		vertices.push_back(v);
-	}
-
-	for (unsigned int i = 0; i < paiMesh->mNumFaces; i++) {
-		const aiFace& face = paiMesh->mFaces[i];
-
-		assert(face.mNumIndices == 3);
-		indices.push_back(face.mIndices[0]);
-		indices.push_back(face.mIndices[1]);
-		indices.push_back(face.mIndices[2]);
-	}
-
-	m_Entries[index].vertices = vertices;
-	m_Entries[index].indices = indices;
-	m_Entries[index].Init(vertices, indices);
-}
-
-// TODO: Just basic rendering. Needs to be built into shader pipeline?
-void Mesh::Render() {
+	// Set the vertex attribute pointers
+	// Positions
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
+
+	// Normals
 	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, normal));
+
+	// Texture Coords
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, textureCoordinates));
 
-	for (unsigned int i = 0; i < m_Entries.size(); i++) {
-		glBindBuffer(GL_ARRAY_BUFFER, m_Entries[i].vb);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)12);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*)20);
+	// Tangent
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, tangent));
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Entries[i].ib);
+	// Bitangent
+	glEnableVertexAttribArray(4);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, bitangent));
 
-		glDrawElements(GL_TRIANGLES, m_Entries[i].numIndices, GL_UNSIGNED_INT, 0);
-	}
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-}
-
-int Mesh::GetNumVertices(int index) {
-	return m_Entries[index].numIndices;
-}
-
-std::vector<glm::vec3> Mesh::GetTriangles(int index) {
-	std::vector<glm::vec3> triangleCoordinate;
-
-	for (unsigned int i = 0; i < m_Entries[index].numIndices; ++i) {
-		triangleCoordinate.push_back(m_Entries[index].vertices[i].vertexCoordinate);
-	}
-
-	return triangleCoordinate;
-}
-
-std::vector<glm::vec3> Mesh::GetNormals(int index) {
-	std::vector<glm::vec3> normalCoordinate;
-	glm::vec3 v1, v2, v3;
-
-	for (unsigned int i = 0; i < m_Entries[index].numIndices; i += 3) {
-		v1 = m_Entries[index].vertices[i].vertexCoordinate;
-		v2 = m_Entries[index].vertices[i + 1].vertexCoordinate;
-		v3 = m_Entries[index].vertices[i + 2].vertexCoordinate;
-
-		normalCoordinate.push_back(glm::normalize(glm::cross((v2 - v1), (v3 - v1))));
-	}
-
-	return normalCoordinate;
+	glBindVertexArray(0);
 }

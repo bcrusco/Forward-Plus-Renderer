@@ -1,59 +1,49 @@
 #pragma once
 
-#include <iostream>
-#include <vector>
+#include "shader.h"
+
 #include <GL\glew.h>
 #include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
 #include <assimp\Scene.h>
 
-struct Vertex {
-	glm::vec3 vertexCoordinate;
-	glm::vec3 normal;
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <vector>
 
-	Vertex();
-	Vertex(glm::vec3 v, glm::vec3 n) {
-		vertexCoordinate = v;
-		normal = n;
-	}
+using namespace std;
+
+// Based on: https://github.com/JoeyDeVries/LearnOpenGL/blob/master/includes/learnopengl/mesh.h
+
+struct Vertex {
+	glm::vec3 position;
+	glm::vec3 normal;
+	glm::vec2 textureCoordinates;
+	glm::vec3 tangent;
+	glm::vec3 bitangent;
 };
 
+struct Texture {
+	GLuint id;
+	string type;
+	aiString path;
+};
 
 class Mesh {
 public:
-	Mesh() {
-		
-	}
+	vector<Vertex> vertices;
+	vector<GLuint> indices;
+	vector<Texture> textures;
+	GLuint VAO;
 
-	~Mesh() {
+	Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures);
 
-	}
-
-	void LoadMesh(const std::string& filename);
-
-	void Render();
-
-	int GetNumVertices(int index);
-	std::vector<glm::vec3> GetTriangles(int index);
-	std::vector<glm::vec3> GetNormals(int index);
+	void Draw(Shader shader);
 
 private:
-	void InitFromScene(const aiScene* pScene);
-	void InitMesh(unsigned int index, const aiMesh* paiMesh);
-	void Clear();
+	GLuint VBO, EBO;
 
-	struct MeshEntry {
-		GLuint vb;
-		GLuint ib;
-		unsigned int numIndices;
-		std::vector<Vertex> vertices;
-		std::vector<unsigned int> indices;
-
-		MeshEntry();
-
-		~MeshEntry();
-
-		void Init(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
-	};
-
-	std::vector<MeshEntry> m_Entries;
+	void SetupMesh();
 };
