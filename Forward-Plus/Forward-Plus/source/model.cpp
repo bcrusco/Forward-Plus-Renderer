@@ -18,7 +18,7 @@ void Model::LoadModel(string path) {
 	}
 
 	// Retrieve the directory path of the filepath and process ASSIMP's root node recursively
-	this->directory = path.substr(0, path.find_last_of('/'));
+	this->directory = path.substr(0, path.find_last_of('\\'));
 	this->ProcessNode(scene->mRootNode, scene);
 }
 
