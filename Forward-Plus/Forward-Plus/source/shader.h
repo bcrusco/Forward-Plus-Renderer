@@ -13,6 +13,9 @@ class Shader {
 public:
 	GLuint Program;
 
+	// Compile a comp shader
+	Shader(const GLchar* computePath);
+
 	// Compile shader on the fly
 	Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLchar* geometryPath);
 

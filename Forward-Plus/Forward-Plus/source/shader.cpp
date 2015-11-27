@@ -2,6 +2,53 @@
 
 // Based on: https://github.com/JoeyDeVries/LearnOpenGL/blob/master/includes/learnopengl/shader.h
 
+Shader::Shader(const GLchar* computePath) {
+	std::string computeCode;
+	std::ifstream computeShaderFile;
+
+	// Ensure that ifstream objects can throw exceptions
+	computeShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+	try {
+		// Open file
+		computeShaderFile.open(computePath);
+		std::stringstream cShaderStream;
+
+		// Read file;s buffer contents into streams
+		cShaderStream << computeShaderFile.rdbuf();
+
+		// close file handlers
+		computeShaderFile.close();
+
+		// Convert stream to string
+		computeCode = cShaderStream.str();
+	}
+	catch (std::ifstream::failure e) {
+		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+	}
+
+	// Then compile shader
+	const GLchar* computeShaderCode = computeCode.c_str();
+
+	GLuint compute;
+
+	// Compute shader
+	compute = glCreateShader(GL_COMPUTE_SHADER);
+	glShaderSource(compute, 1, &computeShaderCode, NULL);
+	glCompileShader(compute);
+	CheckCompileErrors(compute, "COMPUTE");
+
+	// Create the shader program
+	this->Program = glCreateProgram();
+	glAttachShader(this->Program, compute);
+
+	glLinkProgram(this->Program);
+	CheckCompileErrors(this->Program, "PROGRAM");
+
+	// No longer need the shaders, delete them
+	glDeleteShader(compute);
+}
+
 Shader::Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLchar* geometryPath = nullptr) {
 	// First retrieve the vertex and fragment source code from filePath
 	std::string vertexCode;
@@ -52,8 +99,6 @@ Shader::Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLcha
 	const GLchar* fragmentShaderCode = fragmentCode.c_str();
 	
 	GLuint vertex, fragment;
-	GLint success;
-	GLchar infoLog[512];
 
 	// Vertex Shader
 	vertex = glCreateShader(GL_VERTEX_SHADER);
@@ -96,7 +141,6 @@ Shader::Shader(const GLchar* vertexPath, const GLchar* fragmentPath, const GLcha
 	if (geometryPath != nullptr) {
 		glDeleteShader(geometry);
 	}
-
 }
 
 void Shader::Use() {
