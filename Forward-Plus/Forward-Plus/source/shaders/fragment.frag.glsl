@@ -60,7 +60,6 @@ void main() {
   float diff = max(dot(lightDirection, normal), 0.0);
   vec3 diffuse = diff * lightColor;
 
-  // TODO: Change this to handle camera view direction
   vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
   vec3 reflectDirection = reflect(-lightDirection, normal);
   float spec = 0.0;

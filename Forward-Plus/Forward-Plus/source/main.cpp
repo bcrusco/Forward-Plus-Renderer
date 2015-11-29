@@ -1,7 +1,5 @@
 #include "main.h"
 
-
-
 GLuint shaderProgram;
 
 GLuint locationPosition;
@@ -16,6 +14,8 @@ GLuint unifModelInvTr;
 GLuint unifLightPosition;
 GLuint unifLightColor;
 GLuint unifCamPosition;
+
+glm::vec4 ambient = glm::vec4(glm::vec3(0.3f), 1.0f);
 
 // Camera setup
 glm::vec3 camEye = glm::vec3(0, 0, 3);
@@ -45,7 +45,7 @@ void initGLFW(int argc, char* argv[]) {
 	}
 	glfwMakeContextCurrent(gWindow);
 
-	glewExperimental = GL_TRUE; //TODO: Was for an OSX bug. Can I remove?
+	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK) {
 		throw std::runtime_error("glewInit failed");
 	}
@@ -185,6 +185,86 @@ void initShaders() {
 	glUseProgram(0);
 }
 
+void InitScene() {
+
+
+	// Need to create render targets (but how many?)
+	frameBuffer = new FrameBuffer(SCREEN_SIZE.x, SCREEN_SIZE.y);
+	frameBuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A16B16G16R16F);
+	frameBuffer->AttachTexture(GL_DEPTH_ATTACHMENT, GLFMT_D32F);
+
+
+	workGroupsX = (SCREEN_SIZE.x + (SCREEN_SIZE.x % 16)) / 16;
+	workGroupsY = (SCREEN_SIZE.y + (SCREEN_SIZE.y % 16)) / 16;
+
+	size_t numberOfTiles = workGroupsX * workGroupsY;
+
+	glGenBuffers(1, &headBuffer);
+	glGenBuffers(1, &nodeBuffer);
+	glGenBuffers(1, &lightBuffer);
+	glGenBuffers(1, &counterBuffer);
+
+	//TODO: Double check all these sizes
+	// bind head buffer
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, headBuffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16, 0, GL_STATIC_DRAW);
+
+	// bind node buffer
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, nodeBuffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
+
+	// bind light buffer
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_LIGHTS * sizeof(PointLight), 0, GL_DYNAMIC_DRAW);
+
+	// TODO: assign values to lights (in future call simulation)
+	UpdateLights(0.0f);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	// bind counter buffer
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counterBuffer);
+	glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+}
+
+void UpdateLights(float deltaTime) {
+	// this will do some update later, for now just generate lights
+
+	if (lightBuffer == 0) {
+		return;
+	}
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+	glm::vec3 lightPosition(2.3f, 10.0f, -3.0f);
+	// generate the lights
+	int segments = sqrt(NUM_LIGHTS);
+
+	for (int i = 0; i < segments; i++) {
+		for (int j = 0; j < segments; j++) {
+			PointLight &light = pointLights[i * segments + j];
+
+			light.previous[0] = lightPosition[0];
+			light.previous[1] = lightPosition[1];
+			light.previous[2] = lightPosition[2];
+			light.previous[3] = 1.0f;
+
+			light.velocity = glm::vec3(0.0f);
+
+			light.current = light.previous;
+
+			light.radius = 1.5f;
+			light.color = glm::vec3(1.0f);
+		}
+	}
+
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
 GLuint loadTexture(GLchar* imagepath) {
 	GLuint textureId;
 	glGenTextures(1, &textureId);
@@ -269,22 +349,26 @@ std::string TextFileRead(const char *filename) {
 int main(int argc, char **argv) {
 	initGLFW(argc, argv);
 
-	// Need to do some sort of scene loading
 
-	// need to display the plane. do I load a shader?
+	// Test compute shader
+	Shader computeShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_cull.comp.glsl");
+	Shader ambientShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\ambient.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\ambient.frag.glsl", nullptr);
 
-	// need to load the lights and all that jazz
-
-
+	/*
 	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl", 
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\fragment.frag.glsl", nullptr);
+	*/
+	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", nullptr);
+
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.vert.glsl", 
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.frag.glsl", 
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.geom.glsl");
 
-	shader.Use();
-	//glUniform1i(glGetUniformLocation(shader.Program, "u_diffuseTexture"), 0);
-	glUniform1i(glGetUniformLocation(shader.Program, "u_depthMap"), 1);
+	// This was for shadow maps
+	//shader.Use();
+	//glUniform1i(glGetUniformLocation(shader.Program, "u_depthMap"), 1);
 
 
 	// light
@@ -292,6 +376,17 @@ int main(int argc, char **argv) {
 
 	//woodTexture = loadTexture("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\wood.png");
 
+	// init scene stuff (set up buffers for culling)
+	InitScene();
+
+	// set up culling uniforms
+	computeShader.Use();
+	glUniform1i(glGetUniformLocation(computeShader.Program, "depthSampler"), 0);
+	// What texture do I have to bind? nothing for now?
+	//glBindTexture(GL_TEXTURE_2D, computeShader.textures[i].id);
+	glUniform1i(glGetUniformLocation(computeShader.Program, "numberOfLights"), NUM_LIGHTS);
+
+	/*
 	// Configure depth map FBO
 	const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	GLuint depthMapFBO;
@@ -316,9 +411,15 @@ int main(int argc, char **argv) {
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer not complete!" << std::endl;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	*/
+
+
+
+
+
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
+	
 
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
 	// This whole path thing might be wrong
@@ -336,11 +437,13 @@ int main(int argc, char **argv) {
 		// TODO add any movement call backs
 		Movement();
 
+		/*
 		// 0. Create depth cubemap transformation matrices
 		GLfloat aspect = (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT;
 		GLfloat near = 1.0f;
 		GLfloat far = 25.0f;
 		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
+		// TODO: this is going to have to be done for every light in the scene correct?
 		std::vector<glm::mat4> shadowTransforms;
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
@@ -348,51 +451,142 @@ int main(int argc, char **argv) {
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
 		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+		*/
 
+
+		glm::mat4 model;
+		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f)); // Translate it down a bit so it's at the center of the scene
+		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	// It's a bit too big for our scene, so scale it down
+
+		/*
+		// TODO: come back and do shadow map changes after culling is in effect
 		// 1. Render scene to depth cubemap
 		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+
+
+
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
+		
 		depthShader.Use();
 		for (GLuint i = 0; i < 6; ++i)
 			glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, ("u_shadowTransforms[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
 		glUniform1f(glGetUniformLocation(depthShader.Program, "u_farPlane"), far);
 		glUniform3fv(glGetUniformLocation(depthShader.Program, "u_lightPosition"), 1, &lightPos[0]);
 
-		glm::mat4 model;
-		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f)); // Translate it down a bit so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	// It's a bit too big for our scene, so scale it down
+		
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(shader.Program, "u_reverseNormals"), 0);
 		testModel.Draw(depthShader);
 		//RenderScene(depthShader);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// 2. Render scene as normal 
+		// TODO: Replace with my own frame buffer binding now right?
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		*/
+		
 		glViewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shader.Use();
+		
 		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+		
+
+
+
+
+		// Fill zbuffer using ambient shader?
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		frameBuffer->Set();
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		ambientShader.Use();
+		
+		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniform4fv(glGetUniformLocation(ambientShader.Program, "u_ambient"), 1, &ambient[0]);
+		testModel.Draw(ambientShader);
+
+		frameBuffer->Unset();
+
+
+
+
+
+		// do light culling
+		
+		// TODO: test alpha values
+		computeShader.Use();
+
+		glUniform1f(glGetUniformLocation(computeShader.Program, "alpha"), 1.0f);
+		glm::vec2 clipPlanes = glm::vec2(100.0, -100.0); // TODO: Check this value
+		glUniform2fv(glGetUniformLocation(computeShader.Program, "clipPlanes"), 1, &clipPlanes[0]);
+		glm::vec2 screenSize = SCREEN_SIZE;
+		glUniform2fv(glGetUniformLocation(computeShader.Program, "screenSize"), 1, &screenSize[0]);
+		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glm::mat4 viewProjection = projection * view;
+		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
+
+		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counterBuffer);
+		GLuint *counter = (GLuint*)glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_WRITE_ONLY);
+
+		*counter = 0;
+		glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, headBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, nodeBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightBuffer);
+		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counterBuffer);
+
+
+		glBindTexture(GL_TEXTURE_2D, frameBuffer->GetDepthAttachment());
+
+		
+		// do the compute dispatch
+		glDispatchCompute(workGroupsX, workGroupsY, 1);
+
+
+		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, 0);
+		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE);
+		glDepthMask(GL_FALSE);
+
+		frameBuffer->Set();
+
+		glActiveTexture(GL_TEXTURE0);
+
+		// Accumulate the light and render
+		shader.Use();
+		glUniform1f(glGetUniformLocation(shader.Program, "alpha"), 1.0f);
+		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
 		// Set light uniforms
-		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &lightPos[0]);
+		//glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &lightPos[0]);
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
-		// Enable/Disable shadows by pressing 'SPACE'
-		glUniform1i(glGetUniformLocation(shader.Program, "u_shadows"), 1);
-		glUniform1f(glGetUniformLocation(shader.Program, "u_farPlane"), far);
+
+		//glUniform1i(glGetUniformLocation(shader.Program, "u_shadows"), 1);
+		//glUniform1f(glGetUniformLocation(shader.Program, "u_farPlane"), far);
 
 		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, woodTexture);
-		//glActiveTexture(GL_TEXTURE1);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
+		//glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(shader.Program, "u_reverseNormals"), 0);
 		testModel.Draw(shader);
-		//RenderScene(shader);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
+
+		frameBuffer->Unset();
+
+		glDisable(GL_BLEND);
+		glDepthMask(GL_TRUE);
 
 		glfwSwapBuffers(gWindow);
 	}
@@ -402,3 +596,4 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
+
