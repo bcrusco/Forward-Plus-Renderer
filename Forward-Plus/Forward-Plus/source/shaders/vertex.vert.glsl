@@ -19,9 +19,11 @@ uniform mat4 u_model;
 
 void main() {
   gl_Position = u_projection * u_view * u_model * vec4(position, 1.0f);
+  // Why did I write these to be different?
   vertex_out.fragmentPosition = vec3(u_model * vec4(position, 1.0));
 
   // Reverse normals when we are inside the cube
+  // TODO: I can remove this now I think
   if(u_reverseNormals) {
     vertex_out.normal = transpose(inverse(mat3(u_model))) * (-1.0 * normal);
   }

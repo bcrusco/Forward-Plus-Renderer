@@ -128,7 +128,18 @@ void main() {
 
   lightEnd = min(lightStart + lightsPerTile, numberOfLights);
 
+
+
+  
+
+
+  // Now switch to the threads processing lights
   for(uint i = lightStart; i < lightEnd; i++) {
+
+	  uint lightIndex = i * threadCount + gl_LocalInvocationIndex;
+
+
+
     // linear interpolation
 	  // OK what is this?
 	  // Why are we interpolating?

@@ -16,9 +16,8 @@ struct ListNode {
 
 struct PointLight {
   vec4 color;
-  vec4 previous;
-  vec4 current;
-  vec4 velocityRadius;
+  vec3 position;
+  float radius;
 };
 
 layout(std140, binding = 0) buffer HeadBuffer {
@@ -32,6 +31,8 @@ layout(std140, binding = 1) buffer NodeBuffer {
 layout(std140, binding = 2) buffer LightBuffer {
   PointLight data[];
 } lightBuffer;
+
+uniform int tileToLightMap[][];
 
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
@@ -51,6 +52,7 @@ float attenuate(vec3 lightDirection, float radius) {
 
 layout(early_fragment_tests) in;
 void main() {
+
   ivec2 location = ivec2(gl_FragCoord.xy);
   ivec2 tileID = location / ivec2(16, 16);
   int index = tileID.y * numberOfTilesX + tileID.x;

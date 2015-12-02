@@ -480,7 +480,7 @@ int main(int argc, char **argv) {
 		glBlendFunc(GL_ONE, GL_ONE);
 		glDepthMask(GL_FALSE);
 		
-
+		/*
 		// Accumulate the light and render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.Use();
@@ -500,6 +500,7 @@ int main(int argc, char **argv) {
 
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
+		*/
 
 		glfwSwapBuffers(gWindow);
 	}
