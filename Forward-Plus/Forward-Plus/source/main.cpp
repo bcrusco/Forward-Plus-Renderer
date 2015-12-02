@@ -188,12 +188,6 @@ void initShaders() {
 void InitScene() {
 
 
-	// Need to create render targets (but how many?)
-	frameBuffer = new FrameBuffer(SCREEN_SIZE.x, SCREEN_SIZE.y);
-	frameBuffer->AttachTexture(GL_COLOR_ATTACHMENT0, GLFMT_A16B16G16R16F);
-	frameBuffer->AttachTexture(GL_DEPTH_ATTACHMENT, GLFMT_D32F);
-
-
 	workGroupsX = (SCREEN_SIZE.x + (SCREEN_SIZE.x % 16)) / 16;
 	workGroupsY = (SCREEN_SIZE.y + (SCREEN_SIZE.y % 16)) / 16;
 
@@ -367,10 +361,10 @@ int main(int argc, char **argv) {
 
 	// Set texture samples
 	//shader.Use();
-	computeShader.Use(); // Wait, is accum going to use this or compute? Compute should.. So add it there and use that shader
+	//computeShader.Use(); // Wait, is accum going to use this or compute? Compute should.. So add it there and use that shader
 	// TODO: Add this uniform to accum shader
 	// Should be set to 4 I believe, as 0-3 are taken by assimp
-	glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthMap"), 4);
+	//glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthMap"), 4);
 
 
 	// So we need to create a depth map FBO
@@ -407,13 +401,7 @@ int main(int argc, char **argv) {
 
 	// init scene stuff (set up buffers for culling)
 	InitScene();
-
-	// set up culling uniforms
-	computeShader.Use();
-	glUniform1i(glGetUniformLocation(computeShader.Program, "depthSampler"), 0);
-	// What texture do I have to bind? nothing for now?
-	//glBindTexture(GL_TEXTURE_2D, computeShader.textures[i].id);
-	glUniform1i(glGetUniformLocation(computeShader.Program, "numberOfLights"), NUM_LIGHTS);
+	
 
 	
 
@@ -432,7 +420,7 @@ int main(int argc, char **argv) {
 		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		// Step 1: Rener the depth of the scene to texture
+		// Step 1: Render the depth of the scene to texture
 		depthShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -445,11 +433,17 @@ int main(int argc, char **argv) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		
 
-
-		// Step 2: do light culling
 		
+		// Step 2: do light culling
 		// TODO: test alpha values
 		computeShader.Use();
+
+		glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthTexture"), 4);
+		// What texture do I have to bind? nothing for now?
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glUniform1i(glGetUniformLocation(computeShader.Program, "numberOfLights"), NUM_LIGHTS);
+
 
 		glUniform1f(glGetUniformLocation(computeShader.Program, "alpha"), 1.0f);
 		glm::vec2 clipPlanes = glm::vec2(100.0, -100.0); // TODO: Check this value
@@ -472,9 +466,6 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightBuffer);
 		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counterBuffer);
 
-		// TODO: This especially needs to be changed
-		glBindTexture(GL_TEXTURE_2D, frameBuffer->GetDepthAttachment());
-
 		
 		// do the compute dispatch
 		glDispatchCompute(workGroupsX, workGroupsY, 1);
@@ -488,27 +479,16 @@ int main(int argc, char **argv) {
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 		glDepthMask(GL_FALSE);
-
-		frameBuffer->Set();
-
-		// TODO: Why is this one here?
-		glActiveTexture(GL_TEXTURE0);
+		
 
 		// Accumulate the light and render
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.Use();
 		glUniform1f(glGetUniformLocation(shader.Program, "alpha"), 1.0f);
 		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
-		// Set light uniforms
-		//glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &lightPos[0]);
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
-
-		//glUniform1i(glGetUniformLocation(shader.Program, "u_shadows"), 1);
-		//glUniform1f(glGetUniformLocation(shader.Program, "u_farPlane"), far);
-
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(shader.Program, "u_reverseNormals"), 0);
@@ -518,11 +498,8 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 
-		frameBuffer->Unset();
-
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
-
 
 		glfwSwapBuffers(gWindow);
 	}

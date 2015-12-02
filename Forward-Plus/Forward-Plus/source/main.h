@@ -3,7 +3,6 @@
 #include "model.h"
 #include "shader.h"
 #include "camera.h"
-#include "frame_buffer.h"
 
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
@@ -34,9 +33,6 @@ GLuint headBuffer = 0; // head of linked lists
 GLuint nodeBuffer = 0; // nodes of the linked lists
 GLuint lightBuffer = 0; // point lights in scene
 GLuint counterBuffer = 0;
-
-FrameBuffer *frameBuffer;
-FrameBuffer *shadowMap;
 
 GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
