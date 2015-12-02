@@ -1,47 +1,44 @@
 #version 430
 
-struct ListHead {
-  uvec4 startAndCount;
-};
-
-struct ListNode {
-  uvec4 lightIndexAndNext;
-};
-
 struct PointLight {
-  vec4 color;
-  vec4 previous;
-  vec4 current;
-  vec4 velocityRadius;
+	vec4 color;
+	vec3 position;
+	float radius;
 };
 
-layout(std140, binding = 0) buffer HeadBuffer {
-  ListHead data[];
-} headBuffer;
-
-layout(std140, binding = 1) buffer NodeBuffer {
-  ListNode data[];
-} nodeBuffer;
-
-layout(std140, binding = 2) buffer LightBuffer {
+layout(std140, binding = 0) buffer LightBuffer {
   PointLight data[];
 } lightBuffer;
 
+// This is a global that stores ALL the possible visible lights (1024 per tile)
+layout(std140, binding = 1) buffer VisibleLightIndicesBuffer{
+	uint data[];
+} visibleLightIndicesBuffer;
+
+
 // Uniforms
-layout(binding = 0) uniform sampler2D depthSampler;
-layout(binding = 0) uniform atomic_uint nextInsertionPoint;
+uniform sampler2D u_depthTexture; // this should be global right?
+
+uniform int tileToLightMap[][];
+
 
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 viewProjection;
-uniform vec2 clipPlanes;
 uniform vec2 screenSize;
 uniform float alpha;
-uniform int numberOfLights;
 
-// Shared values between all the threads
-shared uint tileMinZ;
-shared uint tileMaxZ;
+uniform int lightCount;
+
+
+// Shared values between all the threads in the group
+shared uint minDepthInt;
+shared uint maxDepthInt;
+shared uint visibleLightCount;
+// For the light indices, is it a shared local thing for now and then at the end we write to the others?
+
+shared uint visibleLightIndices[1024];
+
 shared uint tileLightStart;
 shared uint tileLightCount;
 shared vec4 frustumPlanes[6];
@@ -57,10 +54,9 @@ void main() {
 
   // initialize the shadered global values if we are the first thread
   if(gl_LocalInvocationIndex == 0) {
-    tileMinZ = 0x7F7FFFFF;
-    tileMaxZ = 0;
-    tileLightCount = 0;
-    tileLightStart = 0xFFFFFFFF;
+	  minDepthInt = 0xFFFFFFFF;
+	  maxDepthInt = 0;
+	  visibleLightCount = 0;
   }
 
   // Sync threads
@@ -69,24 +65,18 @@ void main() {
 
   // step 1 is to calculate the min and max depth of this tile
   vec2 text = vec2(location) / screenSize;
-  float depth = texture(depthSampler, text).r;
-  float z = (0.5 * projection[3][2]) / (depth + 0.5 * projection[2][2] - 0.5);
-  float maxZ = max(clipPlanes.x, z);
-  float minZ = min(clipPlanes.y, z);
+  float depth = texture(u_depthTexture, text).r; // Is this line right? What is text doing?
+  atomicMax(tileMaxZ, floatBitsToUint(maxDepthInt));
+  atomicMin(tileMinZ, floatBitsToUint(minDepthInt));
 
-  if(minZ <= maxZ) {
-    // Update tile min and maxes
-    atomicMax(tileMaxZ, floatBitsToUint(maxZ));
-    atomicMin(tileMinZ, floatBitsToUint(minZ));
-  }
 
   // Sync threads
   barrier();
 
   // Step 2 is to then calculate the frustrum (only if we are the first thread)
   if(gl_LocalInvocationIndex == 0) {
-    maxZ = uintBitsToFloat(tileMaxZ);
-    minZ = uintBitsToFloat(tileMinZ);
+    maxZ = uintBitsToFloat(maxDepthInt);
+	minZ = uintBitsToFloat(minDepthInt);
 
     vec2 negativeStep = (2.0 * vec2(tileID)) / vec2(tileNumber);
     vec2 positiveStep = (2.0 * vec2(tileID + ivec2(1, 1))) / vec2(tileNumber);
@@ -140,31 +130,47 @@ void main() {
 
   for(uint i = lightStart; i < lightEnd; i++) {
     // linear interpolation
+	  // OK what is this?
+	  // Why are we interpolating?
     position = mix(lightBuffer.data[i].previous, lightBuffer.data[i].current, alpha);
     radius = lightBuffer.data[i].velocityRadius.w;
 
+	// Check for intersections with every dimension of the frustrum
     float distance = 0.0;
     for(uint j = 0; j < 6; j++) {
       distance = dot(position, frustumPlanes[j]) + radius;
 
       if(distance <= 0) {
-        break;
+        break; // If one fails, then there is no intersection
       }
     }
 
+	// If greater than zero, then it is a visible light
     if(distance > 0) {
       next = atomicCounterIncrement(nextInsertionPoint);
       previous = atomicExchange(tileLightStart, next);
 
       nodeBuffer.data[next].lightIndexAndNext = uvec4(i, previous, 0.0, 0.0);
-      atomicAdd(tileLightCount, 1);
+      
+
+
+
+		// SO this increments it but returns the original so we know where WE are putting it, without telling the others
+		uint offset;
+		offset = atomicAdd(tileLightCount, 1);
+		visibleLightIndices[offset] = lightIndex; //TODO: Where am I actualy storing this to?
     }
   }
 
   // Sync threads
   barrier();
 
-  if(gl_LocalInvocationIndex == 0) {
-    headBuffer.data[index].startAndCount = uvec4(tileLightStart, tileLightCount, 0.0, 0.0);
-  }
+	if(gl_LocalInvocationIndex == 0) {
+		// One of the threads should write all the visible light indices to the proper buffer
+		uint offset = index * 1024;
+		// TODO: I should be able to just copy this in one call, look at later
+		for (uint i = 0; i < 1024; i++) {
+			visibleLightIndicies.data[offset + i] = visibleLightIndices[i];
+		}
+	}
 }
