@@ -352,29 +352,58 @@ int main(int argc, char **argv) {
 
 	// Test compute shader
 	Shader computeShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_cull.comp.glsl");
-	Shader ambientShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\ambient.vert.glsl",
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\ambient.frag.glsl", nullptr);
+
+	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.frag.glsl", NULL);
+
+	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", NULL);
 
 	/*
-	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl", 
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\fragment.frag.glsl", nullptr);
-	*/
-	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", nullptr);
-
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.vert.glsl", 
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.frag.glsl", 
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.geom.glsl");
+		*/
 
-	// This was for shadow maps
+	// Set texture samples
 	//shader.Use();
-	//glUniform1i(glGetUniformLocation(shader.Program, "u_depthMap"), 1);
+	computeShader.Use(); // Wait, is accum going to use this or compute? Compute should.. So add it there and use that shader
+	// TODO: Add this uniform to accum shader
+	// Should be set to 4 I believe, as 0-3 are taken by assimp
+	glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthMap"), 4);
 
 
-	// light
-	glm::vec3 lightPos(2.3f, -1.6f, -3.0f);
+	// So we need to create a depth map FBO
+	// This will be used in the depth pass
+	const GLuint SCREEN_WIDTH = SCREEN_SIZE.x, SCREEN_HEIGHT = SCREEN_SIZE.y;
+	GLuint depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+	// - Create depth texture
+	GLuint depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
 
-	//woodTexture = loadTexture("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\wood.png");
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+	
+
+	// Load in our scene models
+	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
+	Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\nanosuit\\nanosuit.obj");
 
 	// init scene stuff (set up buffers for culling)
 	InitScene();
@@ -386,133 +415,38 @@ int main(int argc, char **argv) {
 	//glBindTexture(GL_TEXTURE_2D, computeShader.textures[i].id);
 	glUniform1i(glGetUniformLocation(computeShader.Program, "numberOfLights"), NUM_LIGHTS);
 
-	/*
-	// Configure depth map FBO
-	const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-	GLuint depthMapFBO;
-	glGenFramebuffers(1, &depthMapFBO);
-	// Create depth cubemap texture
-	GLuint depthCubemap;
-	glGenTextures(1, &depthCubemap);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-	for (GLuint i = 0; i < 6; ++i) {
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	// Attach cubemap as depth map FBO's color buffer
-	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "Framebuffer not complete!" << std::endl;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	*/
-
-
-
-
-
-
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	
-
-	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
-	// This whole path thing might be wrong
-	Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\nanosuit\\nanosuit.obj");
 
 	// run while the window is open
 	while (!glfwWindowShouldClose(gWindow)) {
-
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
 		// Check and call events
 		glfwPollEvents();
-		// TODO add any movement call backs
 		Movement();
 
-		/*
-		// 0. Create depth cubemap transformation matrices
-		GLfloat aspect = (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT;
-		GLfloat near = 1.0f;
-		GLfloat far = 25.0f;
-		glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
-		// TODO: this is going to have to be done for every light in the scene correct?
-		std::vector<glm::mat4> shadowTransforms;
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-		shadowTransforms.push_back(shadowProj * glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
-		*/
-
-
 		glm::mat4 model;
-		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f)); // Translate it down a bit so it's at the center of the scene
-		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));	// It's a bit too big for our scene, so scale it down
-
-		/*
-		// TODO: come back and do shadow map changes after culling is in effect
-		// 1. Render scene to depth cubemap
-		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-
-
-
-		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		
-		depthShader.Use();
-		for (GLuint i = 0; i < 6; ++i)
-			glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, ("u_shadowTransforms[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(shadowTransforms[i]));
-		glUniform1f(glGetUniformLocation(depthShader.Program, "u_farPlane"), far);
-		glUniform3fv(glGetUniformLocation(depthShader.Program, "u_lightPosition"), 1, &lightPos[0]);
-
-		
-		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(shader.Program, "u_reverseNormals"), 0);
-		testModel.Draw(depthShader);
-		//RenderScene(depthShader);
-
-		// TODO: Replace with my own frame buffer binding now right?
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		*/
-		
-		glViewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y);
-		
+		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
 		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+		// Step 1: Rener the depth of the scene to texture
+		depthShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+
+		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		testModel.Draw(depthShader);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		
 
 
-
-
-		// Fill zbuffer using ambient shader?
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_TRUE);
-		frameBuffer->Set();
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		ambientShader.Use();
-		
-		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(ambientShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniform4fv(glGetUniformLocation(ambientShader.Program, "u_ambient"), 1, &ambient[0]);
-		testModel.Draw(ambientShader);
-
-		frameBuffer->Unset();
-
-
-
-
-
-		// do light culling
+		// Step 2: do light culling
 		
 		// TODO: test alpha values
 		computeShader.Use();
@@ -538,7 +472,7 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightBuffer);
 		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counterBuffer);
 
-
+		// TODO: This especially needs to be changed
 		glBindTexture(GL_TEXTURE_2D, frameBuffer->GetDepthAttachment());
 
 		
@@ -557,6 +491,7 @@ int main(int argc, char **argv) {
 
 		frameBuffer->Set();
 
+		// TODO: Why is this one here?
 		glActiveTexture(GL_TEXTURE0);
 
 		// Accumulate the light and render
@@ -587,6 +522,7 @@ int main(int argc, char **argv) {
 
 		glDisable(GL_BLEND);
 		glDepthMask(GL_TRUE);
+
 
 		glfwSwapBuffers(gWindow);
 	}

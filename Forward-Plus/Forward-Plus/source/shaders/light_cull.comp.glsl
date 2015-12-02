@@ -30,6 +30,7 @@ layout(std140, binding = 2) buffer LightBuffer {
 // Uniforms
 layout(binding = 0) uniform sampler2D depthSampler;
 layout(binding = 0) uniform atomic_uint nextInsertionPoint;
+
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 viewProjection;
