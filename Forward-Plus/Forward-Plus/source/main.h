@@ -21,7 +21,7 @@ using namespace std;
 
 const glm::ivec2 SCREEN_SIZE(800, 600);
 
-const int NUM_LIGHTS = 10;
+const int NUM_LIGHTS = 1;
 
 GLFWwindow* gWindow;
 GLuint gVAO = 0;

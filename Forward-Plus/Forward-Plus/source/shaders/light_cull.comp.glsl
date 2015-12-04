@@ -6,13 +6,13 @@ struct PointLight {
 	float radius;
 };
 
-layout(std140, binding = 0) buffer LightBuffer {
+layout(std430, binding = 0) buffer LightBuffer{
 	PointLight data[];
 } lightBuffer;
 
 // This is a global that stores ALL the possible visible lights (1024 per tile)
-layout(std140, binding = 1) buffer VisibleLightIndicesBuffer{
-	uint data[];
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
+	int data[];
 } visibleLightIndicesBuffer;
 
 // Uniforms
@@ -32,7 +32,7 @@ shared uint visibleLightCount;
 // For the light indices, is it a shared local thing for now and then at the end we write to the others?
 
 // Shared local storage for visible indices, will be written out to the buffer at the end
-shared uint visibleLightIndices[1024];
+shared int visibleLightIndices[1024];
 
 shared vec4 frustumPlanes[6];
 
@@ -132,7 +132,7 @@ void main() {
 			// SO this increments it but returns the original so we know where WE are putting it, without telling the others
 			uint offset;
 			offset = atomicAdd(visibleLightCount, 1);
-			visibleLightIndices[offset] = lightIndex;
+			visibleLightIndices[offset] = int(lightIndex);
 		}
 	}
 
@@ -146,5 +146,17 @@ void main() {
 		for (uint i = 0; i < 1024; i++) {
 			visibleLightIndicesBuffer.data[offset + i] = visibleLightIndices[i];
 		}
+
+		if (visibleLightCount != 1024) {
+			// Unless we have totally filled the entire array, mark the end with -1
+			// That way the accum shader will know where to stop
+			visibleLightIndicesBuffer.data[offset + visibleLightCount] = -1;
+		}
+
+		
 	}
+
+	//TODO: FOr testing, remove
+	uint offset = index * 1024;
+	visibleLightIndicesBuffer.data[0] = 0;
 }

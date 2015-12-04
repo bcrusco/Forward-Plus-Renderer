@@ -197,7 +197,8 @@ void InitScene() {
 	// bind visible light indices buffer
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 	//glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(int), 0, GL_DYNAMIC_DRAW);
+	// TODO: Remember to pay attention to if this ends up being signed or unsigned int (right now its signed to mark the end)
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(int), 0, GL_STATIC_DRAW); //TODO: Dynamic or static draw?
 
 	// TODO: assign values to lights (in future call simulation possibly)
 	UpdateLights(0.0f);
@@ -340,6 +341,7 @@ int main(int argc, char **argv) {
 	// So we need to create a depth map FBO
 	// This will be used in the depth pass
 	const GLuint SCREEN_WIDTH = SCREEN_SIZE.x, SCREEN_HEIGHT = SCREEN_SIZE.y;
+	// TODO: Have I actually even confirmed that this is 100% working now?
 	GLuint depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
 	// - Create depth texture
@@ -437,29 +439,27 @@ int main(int argc, char **argv) {
 		// TODO: Triple look into to this stuff and whether it is being used correctly or is needed to do the accumulate stuff
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
-		glDepthMask(GL_FALSE);
+		//glDepthMask(GL_FALSE);
 		
-		/*
+
 		// Accumulate the light and render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.Use();
-		glUniform1f(glGetUniformLocation(shader.Program, "alpha"), 1.0f);
+
 		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(shader.Program, "u_reverseNormals"), 0);
 		testModel.Draw(shader);
+
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 
 		glDisable(GL_BLEND);
-		glDepthMask(GL_TRUE);
-		*/
+		//glDepthMask(GL_TRUE);
 
 		glfwSwapBuffers(gWindow);
 	}
