@@ -198,7 +198,7 @@ void InitScene() {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 	//glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
 	// TODO: Remember to pay attention to if this ends up being signed or unsigned int (right now its signed to mark the end)
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(int), 0, GL_STATIC_DRAW); //TODO: Dynamic or static draw?
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(VisibleIndex), 0, GL_DYNAMIC_DRAW); //TODO: Dynamic or static draw?
 
 	// TODO: assign values to lights (in future call simulation possibly)
 	UpdateLights(0.0f);
@@ -212,6 +212,8 @@ void UpdateLights(float deltaTime) {
 	if (lightBuffer == 0) {
 		return;
 	}
+
+	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
@@ -437,9 +439,6 @@ int main(int argc, char **argv) {
 
 
 		// TODO: Triple look into to this stuff and whether it is being used correctly or is needed to do the accumulate stuff
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE);
-		//glDepthMask(GL_FALSE);
 		
 
 		// Accumulate the light and render
@@ -458,8 +457,6 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 
-		glDisable(GL_BLEND);
-		//glDepthMask(GL_TRUE);
 
 		glfwSwapBuffers(gWindow);
 	}

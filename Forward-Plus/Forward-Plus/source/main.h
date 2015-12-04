@@ -47,6 +47,10 @@ struct PointLight {
 	float radius;
 };
 
+struct VisibleIndex {
+	int index;
+};
+
 void initGLFW(int argc, char* argv[]);
 
 void initShaders();

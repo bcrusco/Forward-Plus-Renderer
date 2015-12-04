@@ -6,13 +6,23 @@ struct PointLight {
 	float radius;
 };
 
+struct VisibleIndex {
+	int index;
+};
+
 layout(std430, binding = 0) buffer LightBuffer{
 	PointLight data[];
 } lightBuffer;
 
 // This is a global that stores ALL the possible visible lights (1024 per tile)
+/*
 layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
 	int data[];
+} visibleLightIndicesBuffer;
+*/
+
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
+	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
 // Uniforms
@@ -44,13 +54,19 @@ void main() {
 	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
 	ivec2 tileID = ivec2(gl_WorkGroupID.xy);
 	ivec2 tileNumber = ivec2(gl_NumWorkGroups.xy);
-	int index = tileID.y * tileNumber.x + tileID.x;
+	int index = tileID.y * tileNumber.x + tileID.x; //is this the tileID or thread id?
 
 	// initialize the shadered global values if we are the first thread
 	if(gl_LocalInvocationIndex == 0) {
 		minDepthInt = 0xFFFFFFFF;
 		maxDepthInt = 0;
 		visibleLightCount = 0;
+		//visibleLightIndicesBuffer.data[0].index = 0;
+		//return;
+		for (int i = 0; i < 1024; i++) {
+			visibleLightIndices[i] = -1;
+		}
+		
 	}
 
 	// Sync threads
@@ -103,60 +119,87 @@ void main() {
 	barrier();
 
 	// cull lights as step 3
+	// Ok this part is fucked
+	// Getting the wrong light index. If I have the right index it works.
+	// So how do I split this so that the threads are parallel around the lights?
 	uint threadCount = BLOCK_SIZE * BLOCK_SIZE;
 	uint passCount = (lightCount + threadCount - 1) / threadCount;
 	// Now switch to the threads processing lights
 	for (uint i = 0; i < passCount; i++) {
-		uint lightIndex = i * threadCount + gl_LocalInvocationIndex;
+		uint lightIndex = i * threadCount + gl_LocalInvocationIndex; // TODO: Is light index even right?
+
+
+
+		lightIndex = min(lightIndex, lightCount - 1);
+
+
+
+
+		if (gl_LocalInvocationIndex != 0) {
+		//	lightIndex = 0;
+		//	continue;
+		}
 
 		// linear interpolation
 		// OK what is this?
 		// Why are we interpolating?
 		// Interpolating to smooth between light positions, maybe have to return to reactivate this later if we want animated lights
 		//vec4 position = mix(lightBuffer.data[i].previous, lightBuffer.data[i].current, alpha);
-		vec4 position = lightBuffer.data[i].position;
-		float radius = lightBuffer.data[i].radius;
+		vec4 position = lightBuffer.data[lightIndex].position;
+		float radius = lightBuffer.data[lightIndex].radius;
+		radius = 100.0;
 
 		// Check for intersections with every dimension of the frustrum
 		float distance = 0.0;
 		for(uint j = 0; j < 6; j++) {
 			distance = dot(position, frustumPlanes[j]) + radius;
 
-			if(distance <= 0) {
+			if(distance <= 0.0) {
 				break; // If one fails, then there is no intersection
 			}
 		}
 
 		// If greater than zero, then it is a visible light
-		if(distance > 0) {
+		if(distance > 0.0) {
 			// SO this increments it but returns the original so we know where WE are putting it, without telling the others
 			uint offset;
 			offset = atomicAdd(visibleLightCount, 1);
 			visibleLightIndices[offset] = int(lightIndex);
+			//visibleLightIndices[offset] = 0;
+
+
+			//offset = index * 1024;
+			//visibleLightIndicesBuffer.data[offset].index = 0;
+			//return;
+			
 		}
 	}
 
 	// Sync threads
 	barrier();
 
+	// I'm intending that one thread in this group is doing this, but is that actually what this code means?
 	if(gl_LocalInvocationIndex == 0) {
 		// One of the threads should write all the visible light indices to the proper buffer
 		uint offset = index * 1024;
 		// TODO: I should be able to just copy this in one call, look at later
 		for (uint i = 0; i < 1024; i++) {
-			visibleLightIndicesBuffer.data[offset + i] = visibleLightIndices[i];
+			visibleLightIndicesBuffer.data[offset + i].index = visibleLightIndices[i];
+			//visibleLightIndicesBuffer.data[offset + i].index = -1;
+			//visibleLightIndicesBuffer.data[offset + i].index = -2;
 		}
 
 		if (visibleLightCount != 1024) {
 			// Unless we have totally filled the entire array, mark the end with -1
 			// That way the accum shader will know where to stop
-			visibleLightIndicesBuffer.data[offset + visibleLightCount] = -1;
+			//visibleLightIndicesBuffer.data[offset + visibleLightCount].index = -1;
 		}
 
-		
+		//visibleLightIndicesBuffer.data[offset].index = 0;
 	}
 
 	//TODO: FOr testing, remove
-	uint offset = index * 1024;
-	visibleLightIndicesBuffer.data[0] = 0;
+	//visibleLightIndicesBuffer.data[offset].index = -1;
+	//visibleLightIndicesBuffer.data[0].index = 0;
+	//visibleLightIndicesBuffer.data[0].index = 0;
 }

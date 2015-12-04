@@ -12,13 +12,23 @@ struct PointLight {
 	float radius;
 };
 
+struct VisibleIndex {
+	int index;
+};
+
 layout(std430, binding = 0) buffer LightBuffer{
 	PointLight data[];
 } lightBuffer;
 
+/*
 // This is a global that stores ALL the possible visible lights (1024 per tile)
 layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
 	int data[];
+} visibleLightIndicesBuffer;
+*/
+
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
+	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
 
@@ -60,8 +70,8 @@ void main() {
 	// Hold up. I also need the offset cause this is the global buffer, not the shared per tile one
 
 	uint offset = index * 1024;
-	for (uint i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i] != -1; i++) {
-		uint lightIndex = visibleLightIndicesBuffer.data[offset + i];
+	for (uint i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
+		uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 
 		vec4 lightColor = lightBuffer.data[lightIndex].color;
 		//vec4 lightPosition = mix(lightBuffer.data[lightID].previous, lightBuffer.data[lightID].current, alpha);
@@ -69,7 +79,8 @@ void main() {
 		float lightRadius = lightBuffer.data[lightIndex].radius;
 
 		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition.xyz;
-		float attenuation = attenuate(lightDirection, lightRadius);
+		//float attenuation = attenuate(lightDirection, lightRadius);
+		float attenuation = 0.001;
 		lightDirection = normalize(lightDirection);
 		vec3 halfway = normalize(lightDirection + viewDirection);
 
@@ -77,11 +88,12 @@ void main() {
 		float specular = pow(max(dot(halfway, normal), 0), 80.0);
 		vec3 irradiance = lightColor.rgb * ((base_diffuse.rgb * diffuse) + (base_specular.rgb * vec3(specular))) * attenuation;
 		color.rgb += irradiance;
-	}
+		//color.rgb = irradiance;
 
-	vec4 lightPosition = vec4(2.3f, 10.0f, -3.0f, 1.0f);
-	vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition.xyz;
-	float diffuse = max(dot(lightDirection, normal), 0);
-	color.rgb = base_diffuse.rgb * diffuse;
+		//color = vec4(1.0);
+		//color = vec4(vec3(attenuation), 1.0);
+	}
+	// TODO: Gotta add some ambient component
+	
 	fragColor = color;
 }
