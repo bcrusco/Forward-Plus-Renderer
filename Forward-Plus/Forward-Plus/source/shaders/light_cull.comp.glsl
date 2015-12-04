@@ -15,7 +15,6 @@ layout(std140, binding = 1) buffer VisibleLightIndicesBuffer{
 	uint data[];
 } visibleLightIndicesBuffer;
 
-
 // Uniforms
 uniform sampler2D u_depthTexture; // this should be global right?
 uniform mat4 view;
@@ -60,7 +59,7 @@ void main() {
 	float maxDepth, minDepth; // this should be in front of the barrier. Should it have some default value?
 	// step 1 is to calculate the min and max depth of this tile
 	vec2 text = vec2(location) / screenSize;
-	float depth = texture(u_depthTexture, text).r; // Is this line right? What is text doing? What is R?
+	float depth = texture(u_depthTexture, text).r; // TODO: Is this line right? What is text doing? What is R? (Could it just be 1 instaed of text? Kinda confused
 	// Wait this seems all messed up
 	uint depthInt = floatBitsToUint(depth);
 	atomicMax(maxDepthInt, depthInt);

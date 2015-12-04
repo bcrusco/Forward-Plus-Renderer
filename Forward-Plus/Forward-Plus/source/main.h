@@ -29,10 +29,8 @@ GLuint gBufPos = 0;
 GLuint gBufCol = 0;
 GLuint gBufSiz = 0;
 
-GLuint headBuffer = 0; // head of linked lists
-GLuint nodeBuffer = 0; // nodes of the linked lists
 GLuint lightBuffer = 0; // point lights in scene
-GLuint counterBuffer = 0;
+GLuint visibleLightIndicesBuffer = 0; // visible lights after culling=
 
 GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
@@ -44,10 +42,8 @@ GLfloat lastFrame = 0.0f;
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 struct PointLight {
-	glm::vec3 color;
-	glm::vec4 previous;
-	glm::vec4 current;
-	glm::vec3 velocity;
+	glm::vec4 color;
+	glm::vec4 position;
 	float radius;
 };
 

@@ -124,11 +124,6 @@ void initShaders() {
 
 	// then do camera setup
 
-
-
-
-
-
 	std::string vertSourceS = TextFileRead("./shaders/blinn_phong.vert.glsl");
 	std::string fragSourceS = TextFileRead("./shaders/blinn_phong.frag.glsl");
 
@@ -186,45 +181,32 @@ void initShaders() {
 }
 
 void InitScene() {
-
-
 	workGroupsX = (SCREEN_SIZE.x + (SCREEN_SIZE.x % 16)) / 16;
 	workGroupsY = (SCREEN_SIZE.y + (SCREEN_SIZE.y % 16)) / 16;
 
 	size_t numberOfTiles = workGroupsX * workGroupsY;
-
-	glGenBuffers(1, &headBuffer);
-	glGenBuffers(1, &nodeBuffer);
+	
 	glGenBuffers(1, &lightBuffer);
-	glGenBuffers(1, &counterBuffer);
+	glGenBuffers(1, &visibleLightIndicesBuffer);
 
-	//TODO: Double check all these sizes
-	// bind head buffer
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, headBuffer);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16, 0, GL_STATIC_DRAW);
-
-	// bind node buffer
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, nodeBuffer);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
-
+	// TODO: Double check all of these sizes
 	// bind light buffer
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_LIGHTS * sizeof(PointLight), 0, GL_DYNAMIC_DRAW);
 
-	// TODO: assign values to lights (in future call simulation)
+	// bind visible light indices buffer
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
+	//glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(int), 0, GL_DYNAMIC_DRAW);
+
+	// TODO: assign values to lights (in future call simulation possibly)
 	UpdateLights(0.0f);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-	// bind counter buffer
-	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counterBuffer);
-	glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint), 0, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 }
 
 void UpdateLights(float deltaTime) {
-	// this will do some update later, for now just generate lights
+	// this will do some update later?, for now just generate lights
 
 	if (lightBuffer == 0) {
 		return;
@@ -233,26 +215,14 @@ void UpdateLights(float deltaTime) {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-	glm::vec3 lightPosition(2.3f, 10.0f, -3.0f);
-	// generate the lights
-	int segments = sqrt(NUM_LIGHTS);
+	glm::vec4 lightPosition(2.3f, 10.0f, -3.0f, 1.0f);
 
-	for (int i = 0; i < segments; i++) {
-		for (int j = 0; j < segments; j++) {
-			PointLight &light = pointLights[i * segments + j];
-
-			light.previous[0] = lightPosition[0];
-			light.previous[1] = lightPosition[1];
-			light.previous[2] = lightPosition[2];
-			light.previous[3] = 1.0f;
-
-			light.velocity = glm::vec3(0.0f);
-
-			light.current = light.previous;
-
-			light.radius = 1.5f;
-			light.color = glm::vec3(1.0f);
-		}
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		PointLight &light = pointLights[i];
+		// These are just some messed up light positions. TODO: Come back and place them logically
+		light.color = glm::vec4(1.0f);
+		light.position = glm::vec4(lightPosition.x + i, lightPosition.y, lightPosition.z, lightPosition.w);
+		light.radius = 1.5f;
 	}
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
@@ -438,16 +408,14 @@ int main(int argc, char **argv) {
 		// TODO: test alpha values
 		computeShader.Use();
 
-		glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthTexture"), 4);
+		
 		// What texture do I have to bind? nothing for now?
 		glActiveTexture(GL_TEXTURE4);
+		glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthTexture"), 4);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
-		glUniform1i(glGetUniformLocation(computeShader.Program, "numberOfLights"), NUM_LIGHTS);
+		glUniform1i(glGetUniformLocation(computeShader.Program, "lightCount"), NUM_LIGHTS);
 
 
-		glUniform1f(glGetUniformLocation(computeShader.Program, "alpha"), 1.0f);
-		glm::vec2 clipPlanes = glm::vec2(100.0, -100.0); // TODO: Check this value
-		glUniform2fv(glGetUniformLocation(computeShader.Program, "clipPlanes"), 1, &clipPlanes[0]);
 		glm::vec2 screenSize = SCREEN_SIZE;
 		glUniform2fv(glGetUniformLocation(computeShader.Program, "screenSize"), 1, &screenSize[0]);
 		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -455,27 +423,18 @@ int main(int argc, char **argv) {
 		glm::mat4 viewProjection = projection * view;
 		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "viewProjection"), 1, GL_FALSE, glm::value_ptr(viewProjection));
 
-		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, counterBuffer);
-		GLuint *counter = (GLuint*)glMapBuffer(GL_ATOMIC_COUNTER_BUFFER, GL_WRITE_ONLY);
-
-		*counter = 0;
-		glUnmapBuffer(GL_ATOMIC_COUNTER_BUFFER);
-
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, headBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, nodeBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightBuffer);
-		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, counterBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, visibleLightIndicesBuffer);
 
 		
 		// do the compute dispatch
 		glDispatchCompute(workGroupsX, workGroupsY, 1);
 
-
-		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, 0);
-		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 
+		// TODO: Triple look into to this stuff and whether it is being used correctly or is needed to do the accumulate stuff
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE);
 		glDepthMask(GL_FALSE);
