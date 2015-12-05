@@ -10,18 +10,11 @@ struct VisibleIndex {
 	int index;
 };
 
-layout(std430, binding = 0) buffer LightBuffer{
+layout(std430, binding = 0) buffer LightBuffer {
 	PointLight data[];
 } lightBuffer;
 
-// This is a global that stores ALL the possible visible lights (1024 per tile)
-/*
 layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
-	int data[];
-} visibleLightIndicesBuffer;
-*/
-
-layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
 	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
@@ -49,7 +42,6 @@ shared vec4 frustumPlanes[6];
 #define BLOCK_SIZE 16
 layout(local_size_x = BLOCK_SIZE, local_size_y = BLOCK_SIZE) in;
 void main() {
-	// Thread setup
 	ivec2 location = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
 	ivec2 tileID = ivec2(gl_WorkGroupID.xy);
@@ -61,12 +53,10 @@ void main() {
 		minDepthInt = 0xFFFFFFFF;
 		maxDepthInt = 0;
 		visibleLightCount = 0;
-		//visibleLightIndicesBuffer.data[0].index = 0;
-		//return;
+
 		for (int i = 0; i < 1024; i++) {
 			visibleLightIndices[i] = -1;
 		}
-		
 	}
 
 	// Sync threads
@@ -75,8 +65,10 @@ void main() {
 	float maxDepth, minDepth; // this should be in front of the barrier. Should it have some default value?
 	// step 1 is to calculate the min and max depth of this tile
 	vec2 text = vec2(location) / screenSize;
-	float depth = texture(u_depthTexture, text).r; // TODO: Is this line right? What is text doing? What is R? (Could it just be 1 instaed of text? Kinda confused
-	// Wait this seems all messed up
+	float depth = texture(u_depthTexture, text).r;
+	depth = (0.5 * projection[3][2]) / (depth + 0.5 * projection[2][2] - 0.5); // Linearize the depth value we brought in (fixes issue where camera position affected culling)
+	
+	// Convert the depth to an int so we can take the atomic min and max
 	uint depthInt = floatBitsToUint(depth);
 	atomicMax(maxDepthInt, depthInt);
 	atomicMin(minDepthInt, depthInt);
@@ -103,8 +95,7 @@ void main() {
 
 		// first four
 		for(uint i = 0; i < 4; i++) {
-			//frustumPlanes[i] *= viewProjection;
-			frustumPlanes[i] = frustumPlanes[i] * viewProjection;
+			frustumPlanes[i] *= viewProjection;
 			frustumPlanes[i] /= length(frustumPlanes[i].xyz);
 		}
 
@@ -132,14 +123,6 @@ void main() {
 
 		lightIndex = min(lightIndex, lightCount - 1);
 
-
-
-
-		if (gl_LocalInvocationIndex != 0) {
-		//	lightIndex = 0;
-		//	continue;
-		}
-
 		// linear interpolation
 		// OK what is this?
 		// Why are we interpolating?
@@ -147,7 +130,6 @@ void main() {
 		//vec4 position = mix(lightBuffer.data[i].previous, lightBuffer.data[i].current, alpha);
 		vec4 position = lightBuffer.data[lightIndex].position;
 		float radius = lightBuffer.data[lightIndex].radius;
-		radius = 100.0;
 
 		// Check for intersections with every dimension of the frustrum
 		float distance = 0.0;
@@ -159,19 +141,14 @@ void main() {
 			}
 		}
 
+
+
 		// If greater than zero, then it is a visible light
 		if(distance > 0.0) {
 			// SO this increments it but returns the original so we know where WE are putting it, without telling the others
 			uint offset;
 			offset = atomicAdd(visibleLightCount, 1);
 			visibleLightIndices[offset] = int(lightIndex);
-			//visibleLightIndices[offset] = 0;
-
-
-			//offset = index * 1024;
-			//visibleLightIndicesBuffer.data[offset].index = 0;
-			//return;
-			
 		}
 	}
 
