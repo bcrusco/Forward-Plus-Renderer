@@ -61,6 +61,7 @@ void initGLFW(int argc, char* argv[]) {
 	}
 
 	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE);
 
 	glfwSetKeyCallback(gWindow, keyCallback);
@@ -185,7 +186,7 @@ void InitScene() {
 	workGroupsY = (SCREEN_SIZE.y + (SCREEN_SIZE.y % 16)) / 16;
 
 	size_t numberOfTiles = workGroupsX * workGroupsY;
-	
+
 	glGenBuffers(1, &lightBuffer);
 	glGenBuffers(1, &visibleLightIndicesBuffer);
 
@@ -198,7 +199,7 @@ void InitScene() {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 	//glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
 	// TODO: Remember to pay attention to if this ends up being signed or unsigned int (right now its signed to mark the end)
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * 1024 * sizeof(VisibleIndex), 0, GL_DYNAMIC_DRAW); //TODO: Dynamic or static draw?
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * sizeof(VisibleIndex) * 1024, 0, GL_STATIC_DRAW); //TODO: Dynamic or static draw?
 
 	// TODO: assign values to lights (in future call simulation possibly)
 	UpdateLights(0.0f);
@@ -213,20 +214,24 @@ void UpdateLights(float deltaTime) {
 		return;
 	}
 
-	//glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-	glm::vec4 lightPosition(2.3f, 10.0f, -3.0f, 1.0f);
+	glm::vec4 lightPosition(1.0f, 1.5f, 1.0f, 1.0f);
 
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
 		// These are just some messed up light positions. TODO: Come back and place them logically
-		light.color = glm::vec4(1.0f);
-		light.position = glm::vec4(lightPosition.x + i, lightPosition.y, lightPosition.z, lightPosition.w);
+		light.color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+		light.position = glm::vec4(-1.0f, lightPosition.y, lightPosition.z, lightPosition.w);
 		light.radius = 1.5f;
 	}
+
+	PointLight &light = pointLights[0];
+	//light.position = glm::vec4(-lightPosition.x, lightPosition.y, 1.0f, lightPosition.w);
+	light.color = glm::vec4(1.0f);
+	light.position = glm::vec4(lightPosition.x, lightPosition.y, lightPosition.z, lightPosition.w);
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -327,10 +332,10 @@ int main(int argc, char **argv) {
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", NULL);
 
 	/*
-	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.vert.glsl", 
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.frag.glsl", 
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.geom.glsl");
-		*/
+	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.vert.glsl",
+	"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.frag.glsl",
+	"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.geom.glsl");
+	*/
 
 	// Set texture samples
 	//shader.Use();
@@ -367,7 +372,7 @@ int main(int argc, char **argv) {
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-	
+
 
 	// Load in our scene models
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
@@ -375,9 +380,9 @@ int main(int argc, char **argv) {
 
 	// init scene stuff (set up buffers for culling)
 	InitScene();
-	
 
-	
+
+
 
 	// run while the window is open
 	while (!glfwWindowShouldClose(gWindow)) {
@@ -405,14 +410,14 @@ int main(int argc, char **argv) {
 		glClear(GL_DEPTH_BUFFER_BIT);
 		testModel.Draw(depthShader);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		
 
-		
+
+
 		// Step 2: do light culling
 		// TODO: test alpha values
 		computeShader.Use();
 
-		
+
 		// What texture do I have to bind? nothing for now?
 		glActiveTexture(GL_TEXTURE4);
 		glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthTexture"), 4);
@@ -430,7 +435,7 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, visibleLightIndicesBuffer);
 
-		
+
 		// do the compute dispatch
 		glDispatchCompute(workGroupsX, workGroupsY, 1);
 
@@ -439,11 +444,11 @@ int main(int argc, char **argv) {
 
 
 		// TODO: Triple look into to this stuff and whether it is being used correctly or is needed to do the accumulate stuff
-		
 
 		// Accumulate the light and render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.Use();
+
 
 		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));

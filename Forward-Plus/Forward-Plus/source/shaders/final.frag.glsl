@@ -1,6 +1,6 @@
 #version 430
 
-in VERTEX_OUT {
+in VERTEX_OUT{
 	vec3 fragmentPosition;
 	vec3 normal;
 	vec2 textureCoordinates;
@@ -20,13 +20,6 @@ layout(std430, binding = 0) buffer LightBuffer{
 	PointLight data[];
 } lightBuffer;
 
-/*
-// This is a global that stores ALL the possible visible lights (1024 per tile)
-layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
-	int data[];
-} visibleLightIndicesBuffer;
-*/
-
 layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
 	VisibleIndex data[];
 } visibleLightIndicesBuffer;
@@ -39,16 +32,20 @@ uniform vec3 u_viewPosition;
 
 out vec4 fragColor;
 
-float attenuate(vec3 lightDirection, float radius) {
-	float attenuation = dot(lightDirection, lightDirection) / radius;
-	attenuation = 1.0 / (attenuation * 15.0 + 1.0);
-	attenuation = (attenuation - 0.0625) * 1.066666;
-	
-	return clamp(attenuation, 0.0, 1.0);
+//float attenuate(vec3 lightDirection, float radius) {
+float attenuate(float lightDistance, float radius) {
+	float d = max(lightDistance - radius, 0);
+	float denom = d / radius + 1;
+	float attenuation = 1 / (denom * denom);
+	float cutoff = 0.001;
+	attenuation = (attenuation - cutoff) / (1 - cutoff);
+	attenuation = max(attenuation, 0);
+
+	return attenuation;
 }
 
 // TODO: What is this one again? I don't think it is needed
-layout(early_fragment_tests) in;
+//layout(early_fragment_tests) in;
 void main() {
 
 
@@ -68,32 +65,40 @@ void main() {
 
 	// So loop until we have covered the entire max lights or we found the end (because we found -1)
 	// Hold up. I also need the offset cause this is the global buffer, not the shared per tile one
-
+	//visibleLightIndicesBuffer.data[offset + i].index != -1
 	uint offset = index * 1024;
 	for (uint i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
 		uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 
+		if (lightIndex < 0 || lightIndex > 1024) {
+			continue;
+		}
+
 		vec4 lightColor = lightBuffer.data[lightIndex].color;
-		//vec4 lightPosition = mix(lightBuffer.data[lightID].previous, lightBuffer.data[lightID].current, alpha);
 		vec4 lightPosition = lightBuffer.data[lightIndex].position;
 		float lightRadius = lightBuffer.data[lightIndex].radius;
 
-		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition.xyz;
+		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
+		float lightDistance = length(lightDirection);
+		float attenuation = attenuate(lightDistance, lightRadius);
 		//float attenuation = attenuate(lightDirection, lightRadius);
-		float attenuation = 0.001;
+		//attenuation = 1.0;
 		lightDirection = normalize(lightDirection);
 		vec3 halfway = normalize(lightDirection + viewDirection);
 
 		float diffuse = max(dot(lightDirection, normal), 0);
 		float specular = pow(max(dot(halfway, normal), 0), 80.0);
 		vec3 irradiance = lightColor.rgb * ((base_diffuse.rgb * diffuse) + (base_specular.rgb * vec3(specular))) * attenuation;
-		color.rgb += irradiance;
-		//color.rgb = irradiance;
 
-		//color = vec4(1.0);
-		//color = vec4(vec3(attenuation), 1.0);
+
+		color.rgb += irradiance;
+		//color.rgb += clamp(irradiance.rgb, 0.0, 1.0);
 	}
-	// TODO: Gotta add some ambient component
-	
+
+	// What is the correct way to add an ambient component?
+	//Don't I need the light color?
+	color += base_diffuse * 0.3;
+
+	//fragColor = vec4(clamp(color.rgb, 0.0, 1.0), 1.0);
 	fragColor = color;
 }

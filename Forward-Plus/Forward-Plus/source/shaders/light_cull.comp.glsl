@@ -10,11 +10,11 @@ struct VisibleIndex {
 	int index;
 };
 
-layout(std430, binding = 0) buffer LightBuffer {
+layout(std430, binding = 0) buffer LightBuffer{
 	PointLight data[];
 } lightBuffer;
 
-layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
 	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
@@ -49,7 +49,7 @@ void main() {
 	int index = tileID.y * tileNumber.x + tileID.x; //is this the tileID or thread id?
 
 	// initialize the shadered global values if we are the first thread
-	if(gl_LocalInvocationIndex == 0) {
+	if (gl_LocalInvocationIndex == 0) {
 		minDepthInt = 0xFFFFFFFF;
 		maxDepthInt = 0;
 		visibleLightCount = 0;
@@ -67,7 +67,7 @@ void main() {
 	vec2 text = vec2(location) / screenSize;
 	float depth = texture(u_depthTexture, text).r;
 	depth = (0.5 * projection[3][2]) / (depth + 0.5 * projection[2][2] - 0.5); // Linearize the depth value we brought in (fixes issue where camera position affected culling)
-	
+
 	// Convert the depth to an int so we can take the atomic min and max
 	uint depthInt = floatBitsToUint(depth);
 	atomicMax(maxDepthInt, depthInt);
@@ -77,8 +77,8 @@ void main() {
 	barrier();
 
 	// Step 2 is to then calculate the frustrum (only if we are the first thread)
-	
-	if(gl_LocalInvocationIndex == 0) {
+
+	if (gl_LocalInvocationIndex == 0) {
 		maxDepth = uintBitsToFloat(maxDepthInt);
 		minDepth = uintBitsToFloat(minDepthInt);
 
@@ -94,7 +94,7 @@ void main() {
 		frustumPlanes[5] = vec4(0.0, 0.0, 1.0, maxDepth); // Far
 
 		// first four
-		for(uint i = 0; i < 4; i++) {
+		for (uint i = 0; i < 4; i++) {
 			frustumPlanes[i] *= viewProjection;
 			frustumPlanes[i] /= length(frustumPlanes[i].xyz);
 		}
@@ -110,22 +110,20 @@ void main() {
 	barrier();
 
 	// cull lights as step 3
-	// Ok this part is fucked
 	// Getting the wrong light index. If I have the right index it works.
 	// So how do I split this so that the threads are parallel around the lights?
 	uint threadCount = BLOCK_SIZE * BLOCK_SIZE;
 	uint passCount = (lightCount + threadCount - 1) / threadCount;
 	// Now switch to the threads processing lights
 	for (uint i = 0; i < passCount; i++) {
+
+		// Isn't the way this loop is set up have the effect of adding more than one of the same light?
+
+
 		uint lightIndex = i * threadCount + gl_LocalInvocationIndex; // TODO: Is light index even right?
+		//lightIndex = min(lightIndex, lightCount - 1); // I should be clamping to a last "null" light, not a valid one
+		lightIndex = min(lightIndex, lightCount);
 
-
-
-		lightIndex = min(lightIndex, lightCount - 1);
-
-		// linear interpolation
-		// OK what is this?
-		// Why are we interpolating?
 		// Interpolating to smooth between light positions, maybe have to return to reactivate this later if we want animated lights
 		//vec4 position = mix(lightBuffer.data[i].previous, lightBuffer.data[i].current, alpha);
 		vec4 position = lightBuffer.data[lightIndex].position;
@@ -133,21 +131,21 @@ void main() {
 
 		// Check for intersections with every dimension of the frustrum
 		float distance = 0.0;
-		for(uint j = 0; j < 6; j++) {
+		for (uint j = 0; j < 6; j++) {
 			distance = dot(position, frustumPlanes[j]) + radius;
 
-			if(distance <= 0.0) {
+			if (distance <= 0.0) {
 				break; // If one fails, then there is no intersection
 			}
 		}
 
-
+		//distance = 1.0;
 
 		// If greater than zero, then it is a visible light
-		if(distance > 0.0) {
+		if (distance > 0.0) {
 			// SO this increments it but returns the original so we know where WE are putting it, without telling the others
-			uint offset;
-			offset = atomicAdd(visibleLightCount, 1);
+
+			uint offset = atomicAdd(visibleLightCount, 1);
 			visibleLightIndices[offset] = int(lightIndex);
 		}
 	}
@@ -156,7 +154,7 @@ void main() {
 	barrier();
 
 	// I'm intending that one thread in this group is doing this, but is that actually what this code means?
-	if(gl_LocalInvocationIndex == 0) {
+	if (gl_LocalInvocationIndex == 0) {
 		// One of the threads should write all the visible light indices to the proper buffer
 		uint offset = index * 1024;
 		// TODO: I should be able to just copy this in one call, look at later
