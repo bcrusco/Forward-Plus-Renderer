@@ -62,7 +62,7 @@ void initGLFW(int argc, char* argv[]) {
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
-	glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE); // THis won't mess with transparancy right?
 
 	glfwSetKeyCallback(gWindow, keyCallback);
 	glfwSetCursorPosCallback(gWindow, mouseCallback);
@@ -238,6 +238,7 @@ void UpdateLights(float deltaTime) {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
+/*
 GLuint loadTexture(GLchar* imagepath) {
 	GLuint textureId;
 	glGenTextures(1, &textureId);
@@ -257,6 +258,7 @@ GLuint loadTexture(GLchar* imagepath) {
 
 	return textureId;
 }
+*/
 
 bool keys[1024];
 bool keysPressed[1024];
@@ -307,7 +309,7 @@ static void mouseCallback(GLFWwindow* window, double x, double y) {
 }
 
 static void scrollCallback(GLFWwindow* window, double x, double y) {
-	camera.ProcessMouseScroll(y);
+	//camera.ProcessMouseScroll(y);
 }
 
 std::string TextFileRead(const char *filename) {
@@ -377,8 +379,8 @@ int main(int argc, char **argv) {
 
 	// Load in our scene models
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
-	Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\nanosuit\\nanosuit.obj");
-
+	//Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\nanosuit\\nanosuit.obj");
+	Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\crytek-sponza\\sponza.obj");
 	// init scene stuff (set up buffers for culling)
 	InitScene();
 
@@ -396,9 +398,9 @@ int main(int argc, char **argv) {
 		Movement();
 
 		glm::mat4 model;
-		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
-		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
-		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 180.0f);
+		//model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 300.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		// Step 1: Render the depth of the scene to texture
 		depthShader.Use();
@@ -492,7 +494,9 @@ int main(int argc, char **argv) {
 		// Accumulate the light and render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shader.Use();
-
+		//glEnable(GL_BLEND);
+		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		//glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
 
 		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -500,12 +504,12 @@ int main(int argc, char **argv) {
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-		testModel.Draw(shader);
 
+		testModel.Draw(shader);
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-
+		//glDisable(GL_BLEND);
 
 		glfwSwapBuffers(gWindow);
 	}

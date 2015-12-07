@@ -46,7 +46,7 @@ float attenuate(float lightDistance, float radius) {
 }
 
 // Forces the early-z test to the fragment shader
-layout(early_fragment_tests) in;
+//layout(early_fragment_tests) in;
 void main() {
 
 
@@ -94,8 +94,17 @@ void main() {
 
 	// What is the correct way to add an ambient component?
 	//Don't I need the light color?
-	color += base_diffuse * 0.3;
+	color += base_diffuse * 0.5;
+
+	// the alpha of the diffuse represents the texture mask
+	color.a = base_diffuse.a;
+
+	if (base_diffuse.a < 0.1) {
+		discard;
+	}
 
 	//fragColor = vec4(clamp(color.rgb, 0.0, 1.0), 1.0);
 	fragColor = color;
+
+	//fragColor = base_diffuse;
 }

@@ -109,7 +109,7 @@ void main() {
 
 
 		// new frustum imp
-		vec2 tileScale = vec2(800, 1200) * (1.0 / float(2 * BLOCK_SIZE)); // is this right value?
+		vec2 tileScale = vec2(800, screenSize[1] * 2) * (1.0 / float(2 * BLOCK_SIZE)); // is this right value?
 		vec2 tileBias = tileScale - vec2(gl_WorkGroupID.xy); // // might be right now?
 
 		vec4 col1 = vec4(-projection[0][0] * tileScale.x, projection[0][1], tileBias.x, projection[0][3]);

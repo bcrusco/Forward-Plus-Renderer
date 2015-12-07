@@ -15,13 +15,13 @@
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\gtc\type_ptr.hpp>
-#include "SOIL.h"
+//#include "SOIL.h"
 
 using namespace std;
 
 const glm::ivec2 SCREEN_SIZE(800, 600);
 
-const int NUM_LIGHTS = 1000;
+const int NUM_LIGHTS = 1;
 
 GLFWwindow* gWindow;
 GLuint gVAO = 0;
@@ -61,7 +61,7 @@ void InitScene();
 
 void UpdateLights(float deltaTime);
 
-GLuint loadTexture(GLchar* imagepath);
+//GLuint loadTexture(GLchar* imagepath);
 
 void printShaderInfoLog(int shader);
 void printLinkInfoLog(int program);
