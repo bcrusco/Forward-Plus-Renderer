@@ -218,7 +218,7 @@ void UpdateLights(float deltaTime) {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-	glm::vec4 lightPosition(1.0f, 1.5f, 1.0f, 1.0f);
+	glm::vec4 lightPosition(0.0f, 1.5f, 1.0f, 1.0f);
 
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
@@ -398,7 +398,7 @@ int main(int argc, char **argv) {
 		glm::mat4 model;
 		model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
-		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 100.0f);
+		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 180.0f);
 		glm::mat4 view = camera.GetViewMatrix();
 		// Step 1: Render the depth of the scene to texture
 		depthShader.Use();

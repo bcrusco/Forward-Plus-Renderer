@@ -71,10 +71,6 @@ void main() {
 	for (uint i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
 		uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 
-		if (lightIndex < 0 || lightIndex > 1024) {
-			continue;
-		}
-
 		vec4 lightColor = lightBuffer.data[lightIndex].color;
 		vec4 lightPosition = lightBuffer.data[lightIndex].position;
 		float lightRadius = lightBuffer.data[lightIndex].paddingAndRadius.w;

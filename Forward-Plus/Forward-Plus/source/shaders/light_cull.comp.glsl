@@ -3,7 +3,6 @@
 struct PointLight {
 	vec4 color;
 	vec4 position;
-	//float radius;
 	vec4 paddingAndRadius;
 };
 
@@ -11,11 +10,11 @@ struct VisibleIndex {
 	int index;
 };
 
-layout(std430, binding = 0) buffer LightBuffer{
+layout(std430, binding = 0) buffer LightBuffer {
 	PointLight data[];
 } lightBuffer;
 
-layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
 	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
@@ -40,6 +39,8 @@ shared int visibleLightIndices[1024];
 
 shared vec4 frustumPlanes[6];
 
+//http://www.dice.se/news/directx-11-rendering-battlefield-3/
+
 #define BLOCK_SIZE 16
 layout(local_size_x = BLOCK_SIZE, local_size_y = BLOCK_SIZE, local_size_z = 1) in;
 void main() {
@@ -54,15 +55,10 @@ void main() {
 		minDepthInt = 0xFFFFFFFF;
 		maxDepthInt = 0;
 		visibleLightCount = 0;
-
-		for (int i = 0; i < 1024; i++) {
-			visibleLightIndices[i] = -1;
-		}
 	}
 
 	// Sync threads
 	barrier();
-	memoryBarrierShared();
 
 	float maxDepth, minDepth; // this should be in front of the barrier. Should it have some default value?
 	// step 1 is to calculate the min and max depth of this tile
@@ -77,7 +73,6 @@ void main() {
 	
 	// Sync threads
 	barrier();
-	memoryBarrierShared();
 
 	// Step 2 is to then calculate the frustrum (only if we are the first thread)
 
@@ -86,9 +81,11 @@ void main() {
 		minDepth = uintBitsToFloat(minDepthInt);
 		maxDepth = uintBitsToFloat(maxDepthInt);
 
+		/*
 		vec2 negativeStep = (2.0 * vec2(tileID)) / vec2(tileNumber);
 		vec2 positiveStep = (2.0 * vec2(tileID + ivec2(1, 1))) / vec2(tileNumber);
 
+		// Increasing / decreaseing these changes how it looks in a favorable way
 		// Set up starting values for planes using steps and min and max z values
 		frustumPlanes[0] = vec4(1.0, 0.0, 0.0, 1.0 - negativeStep.x); // Left
 		frustumPlanes[1] = vec4(-1.0, 0.0, 0.0, -1.0 + positiveStep.x); // Right
@@ -108,11 +105,55 @@ void main() {
 		frustumPlanes[4] /= length(frustumPlanes[4].xyz);
 		frustumPlanes[5] = frustumPlanes[5] * view;
 		frustumPlanes[5] /= length(frustumPlanes[5].xyz);
+		*/
+
+
+		// new frustum imp
+		vec2 tileScale = vec2(800, 1200) * (1.0 / float(2 * BLOCK_SIZE)); // is this right value?
+		vec2 tileBias = tileScale - vec2(gl_WorkGroupID.xy); // // might be right now?
+
+		vec4 col1 = vec4(-projection[0][0] * tileScale.x, projection[0][1], tileBias.x, projection[0][3]);
+
+		vec4 col2 = vec4(projection[1][0], -projection[1][1] * tileScale.y, tileBias.y, projection[1][3]);
+
+		vec4 col4 = vec4(projection[3][0], projection[3][1], -1.0, projection[3][3]);
+
+		//Left plane
+		frustumPlanes[0] = col4 + col1;
+
+		//right plane
+		frustumPlanes[1] = col4 - col1;
+
+		//top plane
+		frustumPlanes[2] = col4 - col2;
+
+		//bottom plane
+		frustumPlanes[3] = col4 + col2;
+
+		//near
+		frustumPlanes[4] = vec4(0.0, 0.0, -1.0, -minDepth);
+
+		//far
+		frustumPlanes[5] = vec4(0.0, 0.0, 1.0, maxDepth);
+
+		for (int i = 0; i < 4; i++) {
+			frustumPlanes[i] *= 1.0 / length(frustumPlanes[i].xyz);
+		}
+
+		frustumPlanes[4] = frustumPlanes[4] * projection;
+		frustumPlanes[4] /= length(frustumPlanes[4].xyz);
+		frustumPlanes[5] = frustumPlanes[5] * projection;
+		frustumPlanes[5] /= length(frustumPlanes[5].xyz);
+		
+
 	}
+
+
 
 	// Sync threads
 	barrier();
-	memoryBarrierShared();
+
+	
 
 	// cull lights as step 3
 	// Getting the wrong light index. If I have the right index it works.
@@ -126,8 +167,6 @@ void main() {
 
 
 		uint lightIndex = i * threadCount + gl_LocalInvocationIndex; // TODO: Is light index even right?
-		//lightIndex = min(lightIndex, lightCount - 1); // I should be clamping to a last "null" light, not a valid one
-		//lightIndex = min(lightIndex, lightCount);
 		if (lightIndex >= lightCount) {
 			break;
 		}
@@ -141,8 +180,10 @@ void main() {
 		float distance = 0.0;
 		for (uint j = 0; j < 6; j++) {
 			distance = dot(position, frustumPlanes[j]) + radius;
+			//distance = dot(position, frustumPlanes[j]);
 
 			if (distance <= 0.0) {
+			//if (-radius > distance) {
 				break; // If one fails, then there is no intersection
 			}
 		}
@@ -152,6 +193,7 @@ void main() {
 
 		// If greater than zero, then it is a visible light
 		if (distance > 0.0) {
+		//if (-radius <= distance) {
 			// SO this increments it but returns the original so we know where WE are putting it, without telling the others
 
 			uint offset = atomicAdd(visibleLightCount, 1);
@@ -161,30 +203,20 @@ void main() {
 
 	// Sync threads
 	barrier();
-	memoryBarrierShared();
 
 	// I'm intending that one thread in this group is doing this, but is that actually what this code means?
 	if (gl_LocalInvocationIndex == 0) {
 		// One of the threads should write all the visible light indices to the proper buffer
 		uint offset = index * 1024;
 		// TODO: I should be able to just copy this in one call, look at later
-		for (uint i = 0; i < 1024; i++) {
+		for (uint i = 0; i < visibleLightCount; i++) {
 			visibleLightIndicesBuffer.data[offset + i].index = visibleLightIndices[i];
-			//visibleLightIndicesBuffer.data[offset + i].index = -1;
-			//visibleLightIndicesBuffer.data[offset + i].index = -2;
 		}
 
 		if (visibleLightCount != 1024) {
 			// Unless we have totally filled the entire array, mark the end with -1
 			// That way the accum shader will know where to stop
-			//visibleLightIndicesBuffer.data[offset + visibleLightCount].index = -1;
+			visibleLightIndicesBuffer.data[offset + visibleLightCount].index = -1;
 		}
-
-		//visibleLightIndicesBuffer.data[offset].index = 0;
 	}
-
-	//TODO: FOr testing, remove
-	//visibleLightIndicesBuffer.data[offset].index = -1;
-	//visibleLightIndicesBuffer.data[0].index = 0;
-	//visibleLightIndicesBuffer.data[0].index = 0;
 }
