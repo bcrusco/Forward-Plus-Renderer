@@ -44,7 +44,8 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 struct PointLight {
 	glm::vec4 color;
 	glm::vec4 position;
-	float radius;
+	//float radius;
+	glm::vec4 paddingAndRadius;
 };
 
 struct VisibleIndex {

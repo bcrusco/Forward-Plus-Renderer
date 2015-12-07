@@ -199,7 +199,7 @@ void InitScene() {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 	//glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * (size_t)16 * 1024, 0, GL_STATIC_DRAW);
 	// TODO: Remember to pay attention to if this ends up being signed or unsigned int (right now its signed to mark the end)
-	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * sizeof(VisibleIndex) * 1024, 0, GL_STATIC_DRAW); //TODO: Dynamic or static draw?
+	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * sizeof(VisibleIndex) * 1024, 0, GL_DYNAMIC_DRAW); //TODO: Dynamic or static draw?
 
 	// TODO: assign values to lights (in future call simulation possibly)
 	UpdateLights(0.0f);
@@ -224,8 +224,9 @@ void UpdateLights(float deltaTime) {
 		PointLight &light = pointLights[i];
 		// These are just some messed up light positions. TODO: Come back and place them logically
 		light.color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		light.position = glm::vec4(-1.0f, lightPosition.y, lightPosition.z, lightPosition.w);
-		light.radius = 1.5f;
+		light.position = glm::vec4(1.0f, lightPosition.y, lightPosition.z, lightPosition.w);
+		//light.radius = 1.5f;
+		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 1.5f);
 	}
 
 	PointLight &light = pointLights[0];
@@ -439,8 +440,51 @@ int main(int argc, char **argv) {
 		// do the compute dispatch
 		glDispatchCompute(workGroupsX, workGroupsY, 1);
 
+		//glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, 0);
+
+
+
+
+
+		// Does it wait for the compute to be finished before proceeding?
+
+		/*
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
+		VisibleIndex *visibleIndices = (VisibleIndex*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+		size_t numberOfTiles = workGroupsX * workGroupsY;
+		for (int i = 0; i < numberOfTiles; i++) {
+
+			VisibleIndex &test = visibleIndices[i * 1024];
+
+			if (test.index != -1) {
+				int debu1 = 2;
+				for (int j = 0; j < 1024; j++) {
+					VisibleIndex &test1 = visibleIndices[(i * 1024) + j];
+					if (test1.index != -1) {
+						int debug = 1;
+					}
+					
+				}
+			}
+		}
+		*/
+		
+		/*
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+		PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+		size_t numberOfTiles = workGroupsX * workGroupsY;
+		for (int i = 0; i < NUM_LIGHTS; i++) {
+
+			PointLight &test = lights[i];
+			int debu1 = 2;
+		}
+		*/
+
 
 
 		// TODO: Triple look into to this stuff and whether it is being used correctly or is needed to do the accumulate stuff

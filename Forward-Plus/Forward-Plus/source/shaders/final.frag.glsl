@@ -9,7 +9,8 @@ in VERTEX_OUT{
 struct PointLight {
 	vec4 color;
 	vec4 position;
-	float radius;
+	//float radius;
+	vec4 paddingAndRadius;
 };
 
 struct VisibleIndex {
@@ -44,8 +45,8 @@ float attenuate(float lightDistance, float radius) {
 	return attenuation;
 }
 
-// TODO: What is this one again? I don't think it is needed
-//layout(early_fragment_tests) in;
+// Forces the early-z test to the fragment shader
+layout(early_fragment_tests) in;
 void main() {
 
 
@@ -76,7 +77,7 @@ void main() {
 
 		vec4 lightColor = lightBuffer.data[lightIndex].color;
 		vec4 lightPosition = lightBuffer.data[lightIndex].position;
-		float lightRadius = lightBuffer.data[lightIndex].radius;
+		float lightRadius = lightBuffer.data[lightIndex].paddingAndRadius.w;
 
 		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
 		float lightDistance = length(lightDirection);

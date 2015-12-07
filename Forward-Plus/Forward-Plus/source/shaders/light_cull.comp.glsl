@@ -3,7 +3,8 @@
 struct PointLight {
 	vec4 color;
 	vec4 position;
-	float radius;
+	//float radius;
+	vec4 paddingAndRadius;
 };
 
 struct VisibleIndex {
@@ -40,7 +41,7 @@ shared int visibleLightIndices[1024];
 shared vec4 frustumPlanes[6];
 
 #define BLOCK_SIZE 16
-layout(local_size_x = BLOCK_SIZE, local_size_y = BLOCK_SIZE) in;
+layout(local_size_x = BLOCK_SIZE, local_size_y = BLOCK_SIZE, local_size_z = 1) in;
 void main() {
 	ivec2 location = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
@@ -61,6 +62,7 @@ void main() {
 
 	// Sync threads
 	barrier();
+	memoryBarrierShared();
 
 	float maxDepth, minDepth; // this should be in front of the barrier. Should it have some default value?
 	// step 1 is to calculate the min and max depth of this tile
@@ -70,17 +72,19 @@ void main() {
 
 	// Convert the depth to an int so we can take the atomic min and max
 	uint depthInt = floatBitsToUint(depth);
-	atomicMax(maxDepthInt, depthInt);
 	atomicMin(minDepthInt, depthInt);
-
+	atomicMax(maxDepthInt, depthInt);
+	
 	// Sync threads
 	barrier();
+	memoryBarrierShared();
 
 	// Step 2 is to then calculate the frustrum (only if we are the first thread)
 
 	if (gl_LocalInvocationIndex == 0) {
-		maxDepth = uintBitsToFloat(maxDepthInt);
+		
 		minDepth = uintBitsToFloat(minDepthInt);
+		maxDepth = uintBitsToFloat(maxDepthInt);
 
 		vec2 negativeStep = (2.0 * vec2(tileID)) / vec2(tileNumber);
 		vec2 positiveStep = (2.0 * vec2(tileID + ivec2(1, 1))) / vec2(tileNumber);
@@ -108,6 +112,7 @@ void main() {
 
 	// Sync threads
 	barrier();
+	memoryBarrierShared();
 
 	// cull lights as step 3
 	// Getting the wrong light index. If I have the right index it works.
@@ -122,12 +127,15 @@ void main() {
 
 		uint lightIndex = i * threadCount + gl_LocalInvocationIndex; // TODO: Is light index even right?
 		//lightIndex = min(lightIndex, lightCount - 1); // I should be clamping to a last "null" light, not a valid one
-		lightIndex = min(lightIndex, lightCount);
+		//lightIndex = min(lightIndex, lightCount);
+		if (lightIndex >= lightCount) {
+			break;
+		}
 
 		// Interpolating to smooth between light positions, maybe have to return to reactivate this later if we want animated lights
 		//vec4 position = mix(lightBuffer.data[i].previous, lightBuffer.data[i].current, alpha);
 		vec4 position = lightBuffer.data[lightIndex].position;
-		float radius = lightBuffer.data[lightIndex].radius;
+		float radius = lightBuffer.data[lightIndex].paddingAndRadius.w;
 
 		// Check for intersections with every dimension of the frustrum
 		float distance = 0.0;
@@ -139,6 +147,7 @@ void main() {
 			}
 		}
 
+		// For debugging. Basically disabled culling, ensures all lights pass and are added
 		//distance = 1.0;
 
 		// If greater than zero, then it is a visible light
@@ -152,6 +161,7 @@ void main() {
 
 	// Sync threads
 	barrier();
+	memoryBarrierShared();
 
 	// I'm intending that one thread in this group is doing this, but is that actually what this code means?
 	if (gl_LocalInvocationIndex == 0) {
