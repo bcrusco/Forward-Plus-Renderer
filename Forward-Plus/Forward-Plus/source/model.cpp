@@ -12,6 +12,8 @@ void Model::LoadModel(string path) {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 
+	// Or do I init it here?
+
 	if (!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 		cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << endl;
 		return;
@@ -153,7 +155,69 @@ vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type,
 	return textures;
 }
 
+// TODO: This needs to be updated to use DevIL instead of SOIL (which is not loading targa files for me)
 GLint TextureFromFile(const char* path, string directory, bool gamma) {
+	string filename = string(path);
+	filename = directory + '/' + filename;
+
+	ILboolean success;
+
+	/* initialization of DevIL */
+	// do this here each time or once before the loop?
+	ilInit();
+	ILuint imageID;
+	ilGenImages(1, &imageID);
+
+
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+
+
+	// Need to double TRIPLE check that I am getting the right ids and here
+
+
+	ilBindImage(imageID); /* Binding of DevIL image name */
+	ilEnable(IL_ORIGIN_SET);
+	ilOriginFunc(IL_ORIGIN_LOWER_LEFT);
+	success = ilLoadImage((ILstring)filename.c_str());
+
+
+	if (success) {
+		/* Convert image to RGBA */
+		ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+
+		/* Create and load textures to OpenGL */
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, ilGetInteger(IL_IMAGE_WIDTH),
+			ilGetInteger(IL_IMAGE_HEIGHT), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+			ilGetData());
+
+		glGenerateMipmap(GL_TEXTURE_2D); // Should I have this?
+
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // yes?
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // yes?
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		ilDeleteImages(1, &imageID);
+
+		return textureID;
+
+	}
+	else {
+		int debug = 1;
+		// Print failure
+		return -1;
+	}
+
+	//return textureID;
+
+
+	/*
 	//Generate texture ID and load texture data 
 	string filename = string(path);
 	filename = directory + '/' + filename;
@@ -162,11 +226,12 @@ GLint TextureFromFile(const char* path, string directory, bool gamma) {
 	glGenTextures(1, &textureID);
 
 	int width, height;
-	unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+	//unsigned char* image = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
 
 	// Assign texture to ID
+	// I think this will all have to be updated to do alpha?
 	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, gamma ? GL_SRGB : GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	//glTexImage2D(GL_TEXTURE_2D, 0, gamma ? GL_SRGB : GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	// Parameters
@@ -175,6 +240,7 @@ GLint TextureFromFile(const char* path, string directory, bool gamma) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	SOIL_free_image_data(image);
+	//SOIL_free_image_data(image);
 	return textureID;
+	*/
 }
