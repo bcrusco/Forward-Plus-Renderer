@@ -218,22 +218,24 @@ void UpdateLights(float deltaTime) {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-	glm::vec4 lightPosition(0.0f, 1.5f, 1.0f, 1.0f);
-
+	glm::vec4 lightPosition(-100.0f, 5.0f, 0.0f, 1.0f);
+	glm::vec4 lastPos = lightPosition;
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
 		// These are just some messed up light positions. TODO: Come back and place them logically
-		light.color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		light.position = glm::vec4(1.0f, lightPosition.y, lightPosition.z, lightPosition.w);
+		light.color = glm::vec4(1.0f);
+
+		light.position = glm::vec4(lastPos.x + 20.0f, lightPosition.y, lightPosition.z, lightPosition.w);
+		lastPos = light.position;
 		//light.radius = 1.5f;
-		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 1.5f);
+		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 30.5f);
 	}
 
 	PointLight &light = pointLights[0];
 	//light.position = glm::vec4(-lightPosition.x, lightPosition.y, 1.0f, lightPosition.w);
 	light.color = glm::vec4(1.0f);
-	light.position = glm::vec4(lightPosition.x, lightPosition.y, lightPosition.z, lightPosition.w);
-
+	//light.position = glm::vec4(5.0f, lightPosition.y, lightPosition.z, lightPosition.w);
+	//light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 3.0f);
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }

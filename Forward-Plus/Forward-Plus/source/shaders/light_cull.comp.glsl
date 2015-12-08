@@ -81,7 +81,7 @@ void main() {
 		minDepth = uintBitsToFloat(minDepthInt);
 		maxDepth = uintBitsToFloat(maxDepthInt);
 
-		/*
+		
 		vec2 negativeStep = (2.0 * vec2(tileID)) / vec2(tileNumber);
 		vec2 positiveStep = (2.0 * vec2(tileID + ivec2(1, 1))) / vec2(tileNumber);
 
@@ -105,11 +105,11 @@ void main() {
 		frustumPlanes[4] /= length(frustumPlanes[4].xyz);
 		frustumPlanes[5] = frustumPlanes[5] * view;
 		frustumPlanes[5] /= length(frustumPlanes[5].xyz);
-		*/
+		
 
-
+		/*
 		// new frustum imp
-		vec2 tileScale = vec2(800, screenSize[1] * 2) * (1.0 / float(2 * BLOCK_SIZE)); // is this right value?
+		vec2 tileScale = vec2(800 + 400, screenSize[1] * 2) * (1.0 / float(2 * BLOCK_SIZE)); // is this right value?
 		vec2 tileBias = tileScale - vec2(gl_WorkGroupID.xy); // // might be right now?
 
 		vec4 col1 = vec4(-projection[0][0] * tileScale.x, projection[0][1], tileBias.x, projection[0][3]);
@@ -145,7 +145,7 @@ void main() {
 		frustumPlanes[5] = frustumPlanes[5] * projection;
 		frustumPlanes[5] /= length(frustumPlanes[5].xyz);
 		
-
+		*/
 	}
 
 

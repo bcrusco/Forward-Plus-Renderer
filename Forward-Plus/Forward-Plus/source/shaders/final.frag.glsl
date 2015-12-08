@@ -2,14 +2,16 @@
 
 in VERTEX_OUT{
 	vec3 fragmentPosition;
-	vec3 normal;
 	vec2 textureCoordinates;
+	//vec3 tangentLightPosition;
+	mat3 TBN;
+	vec3 tangentViewPosition;
+	vec3 tangentFragmentPosition;
 } fragment_in;
 
 struct PointLight {
 	vec4 color;
 	vec4 position;
-	//float radius;
 	vec4 paddingAndRadius;
 };
 
@@ -17,23 +19,32 @@ struct VisibleIndex {
 	int index;
 };
 
-layout(std430, binding = 0) buffer LightBuffer{
+layout(std430, binding = 0) buffer LightBuffer {
 	PointLight data[];
 } lightBuffer;
 
-layout(std430, binding = 1) buffer VisibleLightIndicesBuffer{
+layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
 	VisibleIndex data[];
 } visibleLightIndicesBuffer;
 
 
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
+
+
+// TODO: Will this be right? DO some of them have multiple normal maps?
+uniform sampler2D texture_normal1;
+
+
 uniform int numberOfTilesX;
-uniform vec3 u_viewPosition;
+
+
+//uniform vec3 u_viewPosition;
+
+
 
 out vec4 fragColor;
 
-//float attenuate(vec3 lightDirection, float radius) {
 float attenuate(float lightDistance, float radius) {
 	float d = max(lightDistance - radius, 0);
 	float denom = d / radius + 1;
@@ -45,8 +56,16 @@ float attenuate(float lightDistance, float radius) {
 	return attenuation;
 }
 
-// Forces the early-z test to the fragment shader
-//layout(early_fragment_tests) in;
+
+float attenuate2(vec3 ldir, float radius) {
+	float atten = dot(ldir, ldir) / radius;
+
+	atten = 1.0 / (atten * 15.0 + 1.0);
+	atten = (atten - 0.0625) * 1.066666;
+
+	return clamp(atten, 0.0, 1.0);
+}
+
 void main() {
 
 
@@ -57,8 +76,25 @@ void main() {
 	vec4 base_diffuse = texture(texture_diffuse1, fragment_in.textureCoordinates);
 	vec4 base_specular = texture(texture_specular1, fragment_in.textureCoordinates);
 	vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
-	vec3 normal = normalize(fragment_in.normal);
-	vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
+
+
+
+	//vec3 normal = normalize(fragment_in.normal);
+	// get the normal from the normal map in the range 0 to 1 and convert to -1 to 1
+	// in tangent space
+	vec3 normal = texture(texture_normal1, fragment_in.textureCoordinates).rgb;
+	normal = normalize(normal * 2.0 - 1.0);
+
+
+
+
+
+
+
+
+	//vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
+	vec3 viewDirection = normalize(fragment_in.fragmentPosition - fragment_in.tangentFragmentPosition);
+
 
 	// Ok so in my version I won't know what the size of the data is (just the max)
 	// So I have to assume that there's some default value that the array is set to?
@@ -68,23 +104,41 @@ void main() {
 	// Hold up. I also need the offset cause this is the global buffer, not the shared per tile one
 	//visibleLightIndicesBuffer.data[offset + i].index != -1
 	uint offset = index * 1024;
-	for (uint i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
+	uint i;
+	for (i = 0; i < 1024 && visibleLightIndicesBuffer.data[offset + i].index != -1; i++) {
 		uint lightIndex = visibleLightIndicesBuffer.data[offset + i].index;
 
 		vec4 lightColor = lightBuffer.data[lightIndex].color;
-		vec4 lightPosition = lightBuffer.data[lightIndex].position;
+
+
+
+
+		//vec4 lightPosition = lightBuffer.data[lightIndex].position;
+		vec3 tangentLightPosition = fragment_in.TBN * lightBuffer.data[lightIndex].position.xyz;
+
+		//vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
+		vec3 lightDirection = tangentLightPosition - fragment_in.tangentFragmentPosition; //do I normalize here? no..
+
+
+
 		float lightRadius = lightBuffer.data[lightIndex].paddingAndRadius.w;
 
-		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
+		
 		float lightDistance = length(lightDirection);
-		float attenuation = attenuate(lightDistance, lightRadius);
+
+		//float attenuation = attenuate(lightDistance, lightRadius);
+		float attenuation = attenuate2(lightDirection, lightRadius);
+		attenuation *= 2.0;
+		attenuation = 1.0;
 		//float attenuation = attenuate(lightDirection, lightRadius);
 		//attenuation = 1.0;
 		lightDirection = normalize(lightDirection);
+
+
 		vec3 halfway = normalize(lightDirection + viewDirection);
 
 		float diffuse = max(dot(lightDirection, normal), 0);
-		float specular = pow(max(dot(halfway, normal), 0), 80.0);
+		float specular = pow(max(dot(halfway, normal), 0), 80.0); // why is this the value? it was 80
 		vec3 irradiance = lightColor.rgb * ((base_diffuse.rgb * diffuse) + (base_specular.rgb * vec3(specular))) * attenuation;
 
 
@@ -94,8 +148,15 @@ void main() {
 
 	// What is the correct way to add an ambient component?
 	//Don't I need the light color?
-	color += base_diffuse * 0.5;
+	//color += base_diffuse * 0.1;
 
+	if (i == 0) {
+		color = base_diffuse * 0.3;
+		fragColor = color;
+		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
+		return;
+	}
+	
 	// the alpha of the diffuse represents the texture mask
 	color.a = base_diffuse.a;
 
@@ -103,8 +164,10 @@ void main() {
 		discard;
 	}
 
-	//fragColor = vec4(clamp(color.rgb, 0.0, 1.0), 1.0);
-	fragColor = color;
+	fragColor = vec4(clamp(color.rgb, 0.0, 1.0), color.a);
+	//fragColor = color;
+	//vec4 test = vec4(vec3(float(i) / 2.0), 1.0);
+	//fragColor = test;
 
 	//fragColor = base_diffuse;
 }
