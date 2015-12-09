@@ -2,11 +2,14 @@
 
 in VERTEX_OUT{
 	vec3 fragmentPosition;
+	vec3 normal;
 	vec2 textureCoordinates;
 	//vec3 tangentLightPosition;
+	/*
 	mat3 TBN;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
+	*/
 } fragment_in;
 
 struct PointLight {
@@ -39,8 +42,7 @@ uniform sampler2D texture_normal1;
 uniform int numberOfTilesX;
 
 
-//uniform vec3 u_viewPosition;
-
+uniform vec3 u_viewPosition;
 
 
 out vec4 fragColor;
@@ -49,7 +51,7 @@ float attenuate(float lightDistance, float radius) {
 	float d = max(lightDistance - radius, 0);
 	float denom = d / radius + 1;
 	float attenuation = 1 / (denom * denom);
-	float cutoff = 0.001;
+	float cutoff = 0.1;
 	attenuation = (attenuation - cutoff) / (1 - cutoff);
 	attenuation = max(attenuation, 0);
 
@@ -58,12 +60,24 @@ float attenuate(float lightDistance, float radius) {
 
 
 float attenuate2(vec3 ldir, float radius) {
-	float atten = dot(ldir, ldir) / radius;
 
+
+	//float atten = dot(ldir, ldir) / (0.001 * radius);
+	float atten = 1.0;
 	atten = 1.0 / (atten * 15.0 + 1.0);
 	atten = (atten - 0.0625) * 1.066666;
 
 	return clamp(atten, 0.0, 1.0);
+}
+
+float attenuate3(float lightDistance, float radius) {
+	float lin = 0.09;
+	float constant = 1.0;
+	float quadratic = 0.032;
+	float attenuation = 1.0f / (constant + lin * lightDistance +
+		quadratic * (lightDistance * lightDistance));
+
+	return attenuation;
 }
 
 void main() {
@@ -82,8 +96,9 @@ void main() {
 	//vec3 normal = normalize(fragment_in.normal);
 	// get the normal from the normal map in the range 0 to 1 and convert to -1 to 1
 	// in tangent space
-	vec3 normal = texture(texture_normal1, fragment_in.textureCoordinates).rgb;
-	normal = normalize(normal * 2.0 - 1.0);
+	//vec3 normal = texture(texture_normal1, fragment_in.textureCoordinates).rgb;
+	//normal = normalize(normal * 2.0 - 1.0);
+	vec3 normal = normalize(fragment_in.normal);
 
 
 
@@ -91,9 +106,8 @@ void main() {
 
 
 
-
-	//vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
-	vec3 viewDirection = normalize(fragment_in.fragmentPosition - fragment_in.tangentFragmentPosition);
+	vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
+	//vec3 viewDirection = normalize(fragment_in.tangentViewPosition - fragment_in.tangentFragmentPosition);
 
 
 	// Ok so in my version I won't know what the size of the data is (just the max)
@@ -113,11 +127,11 @@ void main() {
 
 
 
-		//vec4 lightPosition = lightBuffer.data[lightIndex].position;
-		vec3 tangentLightPosition = fragment_in.TBN * lightBuffer.data[lightIndex].position.xyz;
+		vec4 lightPosition = lightBuffer.data[lightIndex].position;
+		//vec3 tangentLightPosition = fragment_in.TBN * lightBuffer.data[lightIndex].position.xyz;
 
-		//vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
-		vec3 lightDirection = tangentLightPosition - fragment_in.tangentFragmentPosition; //do I normalize here? no..
+		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
+		//vec3 lightDirection = tangentLightPosition - fragment_in.tangentFragmentPosition; //do I normalize here? no..
 
 
 
@@ -126,20 +140,24 @@ void main() {
 		
 		float lightDistance = length(lightDirection);
 
-		//float attenuation = attenuate(lightDistance, lightRadius);
+		//float attenuation = attenuate3(lightDistance, lightRadius);
 		float attenuation = attenuate2(lightDirection, lightRadius);
-		attenuation *= 2.0;
-		attenuation = 1.0;
-		//float attenuation = attenuate(lightDirection, lightRadius);
+		//attenuation *= 100000.0;
 		//attenuation = 1.0;
+		//float attenuation = attenuate(lightDirection, lightRadius);
+		//attenuation = 0.5;
 		lightDirection = normalize(lightDirection);
 
 
 		vec3 halfway = normalize(lightDirection + viewDirection);
 
 		float diffuse = max(dot(lightDirection, normal), 0);
+
+		// How do I change the material propery for the spec exponent? is it the alpha of hte spec texture?
 		float specular = pow(max(dot(halfway, normal), 0), 80.0); // why is this the value? it was 80
 		vec3 irradiance = lightColor.rgb * ((base_diffuse.rgb * diffuse) + (base_specular.rgb * vec3(specular))) * attenuation;
+
+		//color.rgb = lightColor.rgb * base_diffuse.rgb * diffuse;
 
 
 		color.rgb += irradiance;
@@ -150,12 +168,17 @@ void main() {
 	//Don't I need the light color?
 	//color += base_diffuse * 0.1;
 
+	/*
 	if (i == 0) {
 		color = base_diffuse * 0.3;
 		fragColor = color;
 		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
 		return;
-	}
+	}*/
+
+	color += base_diffuse * 0.3;
+
+
 	
 	// the alpha of the diffuse represents the texture mask
 	color.a = base_diffuse.a;

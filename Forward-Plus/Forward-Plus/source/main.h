@@ -77,3 +77,5 @@ static void mouseCallback(GLFWwindow* window, double x, double y);
 static void scrollCallback(GLFWwindow* window, double x, double y);
 
 int main(int argc, char **argv);
+
+void RenderQuad();

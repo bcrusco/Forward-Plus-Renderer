@@ -66,10 +66,12 @@ void main() {
 	float depth = texture(u_depthTexture, text).r;
 	depth = (0.5 * projection[3][2]) / (depth + 0.5 * projection[2][2] - 0.5); // Linearize the depth value we brought in (fixes issue where camera position affected culling)
 
+
 	// Convert the depth to an int so we can take the atomic min and max
 	uint depthInt = floatBitsToUint(depth);
 	atomicMin(minDepthInt, depthInt);
 	atomicMax(maxDepthInt, depthInt);
+	
 	
 	// Sync threads
 	barrier();
@@ -80,6 +82,11 @@ void main() {
 		
 		minDepth = uintBitsToFloat(minDepthInt);
 		maxDepth = uintBitsToFloat(maxDepthInt);
+
+		uint offset = index * 1024;
+		// TODO: I should be able to just copy this in one call, look at later
+		lightBuffer.data[offset].paddingAndRadius.x = minDepth;
+		lightBuffer.data[offset].paddingAndRadius.y = maxDepth;
 
 		
 		vec2 negativeStep = (2.0 * vec2(tileID)) / vec2(tileNumber);
@@ -177,6 +184,12 @@ void main() {
 		float radius = lightBuffer.data[lightIndex].paddingAndRadius.w;
 
 		// Check for intersections with every dimension of the frustrum
+
+		// Ok so assuming my point stuff is messed up, if the point is just at zero, it follows the camera, nothing is culled?
+		//position = vec4(vec3(0.0, 0.0, 0.0), 1.0);
+
+
+
 		float distance = 0.0;
 		for (uint j = 0; j < 6; j++) {
 			distance = dot(position, frustumPlanes[j]) + radius;
