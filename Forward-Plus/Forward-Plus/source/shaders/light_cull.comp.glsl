@@ -202,7 +202,7 @@ void main() {
 		}
 
 		// For debugging. Basically disabled culling, ensures all lights pass and are added
-		//distance = 1.0;
+		distance = 1.0;
 
 		// If greater than zero, then it is a visible light
 		if (distance > 0.0) {

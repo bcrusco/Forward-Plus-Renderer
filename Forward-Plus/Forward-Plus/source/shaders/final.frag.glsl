@@ -2,14 +2,14 @@
 
 in VERTEX_OUT{
 	vec3 fragmentPosition;
-	vec3 normal;
+	//vec3 normal;
 	vec2 textureCoordinates;
 	//vec3 tangentLightPosition;
-	/*
+	
 	mat3 TBN;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
-	*/
+	
 } fragment_in;
 
 struct PointLight {
@@ -42,7 +42,7 @@ uniform sampler2D texture_normal1; // how to tell if this is active or not?
 uniform int numberOfTilesX;
 
 
-uniform vec3 u_viewPosition;
+//uniform vec3 u_viewPosition;
 
 
 out vec4 fragColor;
@@ -76,9 +76,9 @@ void main() {
 	//vec3 normal = normalize(fragment_in.normal);
 	// get the normal from the normal map in the range 0 to 1 and convert to -1 to 1
 	// in tangent space
-	//vec3 normal = texture(texture_normal1, fragment_in.textureCoordinates).rgb;
-	//normal = normalize(normal * 2.0 - 1.0);
-	vec3 normal = normalize(fragment_in.normal);
+	vec3 normal = texture(texture_normal1, fragment_in.textureCoordinates).rgb;
+	normal = normalize(normal * 2.0 - 1.0);
+	//vec3 normal = normalize(fragment_in.normal);
 
 
 
@@ -86,8 +86,8 @@ void main() {
 
 
 
-	vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
-	//vec3 viewDirection = normalize(fragment_in.tangentViewPosition - fragment_in.tangentFragmentPosition);
+	//vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
+	vec3 viewDirection = normalize(fragment_in.tangentViewPosition - fragment_in.tangentFragmentPosition);
 
 
 	// Ok so in my version I won't know what the size of the data is (just the max)
@@ -107,11 +107,11 @@ void main() {
 
 
 
-		vec4 lightPosition = lightBuffer.data[lightIndex].position;
-		//vec3 tangentLightPosition = fragment_in.TBN * lightBuffer.data[lightIndex].position.xyz;
+		//vec4 lightPosition = lightBuffer.data[lightIndex].position;
+		vec3 tangentLightPosition = fragment_in.TBN * lightBuffer.data[lightIndex].position.xyz;
 
-		vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
-		//vec3 lightDirection = tangentLightPosition - fragment_in.tangentFragmentPosition; //do I normalize here? no..
+		//vec3 lightDirection = lightPosition.xyz - fragment_in.fragmentPosition;
+		vec3 lightDirection = tangentLightPosition - fragment_in.tangentFragmentPosition; //do I normalize here? no..
 
 
 
@@ -152,6 +152,7 @@ void main() {
 	}
 	*/
 
+	// possibly remove ambient since it won't be able to handle normals?
 	color += base_diffuse * 0.1;
 
 
