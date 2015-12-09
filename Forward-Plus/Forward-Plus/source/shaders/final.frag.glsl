@@ -51,9 +51,11 @@ out vec4 fragColor;
 float attenuate(vec3 ldir, float radius) {
 
 
-	float atten = dot(ldir, ldir) / (8.0 * radius);
+	float atten = dot(ldir, ldir) / (100 * radius);
 	atten = 1.0 / (atten * 15.0 + 1.0);
-	atten = (atten - 0.0625) * 1.066666;
+	float cutoff = 0.5;
+	atten = (atten - cutoff) / (1 - cutoff);
+	//atten = (atten - 0.0625) * 1.066666;
 
 	return clamp(atten, 0.0, 1.0);
 }
@@ -147,9 +149,10 @@ void main() {
 		fragColor = color;
 		fragColor = vec4(0.0, 1.0, 0.0, 1.0);
 		return;
-	}*/
+	}
+	*/
 
-	color += base_diffuse * 0.3;
+	color += base_diffuse * 0.1;
 
 
 	

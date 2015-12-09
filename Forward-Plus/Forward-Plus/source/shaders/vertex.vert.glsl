@@ -30,7 +30,7 @@ uniform mat4 u_model;
 
 void main() {
 
-	gl_Position = u_projection * u_view * u_model * vec4(position, 1.0f);
+	gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
 	// Why did I write these to be different?
 	vertex_out.fragmentPosition = vec3(u_model * vec4(position, 1.0));
 

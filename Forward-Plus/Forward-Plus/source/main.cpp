@@ -201,41 +201,59 @@ void InitScene() {
 	// TODO: Remember to pay attention to if this ends up being signed or unsigned int (right now its signed to mark the end)
 	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * sizeof(VisibleIndex) * 1024, 0, GL_DYNAMIC_DRAW); //TODO: Dynamic or static draw?
 
-	// TODO: assign values to lights (in future call simulation possibly)
-	UpdateLights(0.0f);
+	SetupLights();
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-void UpdateLights(float deltaTime) {
-	// this will do some update later?, for now just generate lights
+glm::vec3 RandomPosition(uniform_real_distribution<> dis, mt19937 gen) {
+	glm::vec3 position = glm::vec3(0.0);
+	for (int i = 0; i < 3; i++) {
+		float min = lightMinBounds[i];
+		float max = lightMaxBounds[i];
+		position[i] = dis(gen) * (max - min) + min;
+	}
 
+	return position;
+}
+
+void SetupLights() {
 	if (lightBuffer == 0) {
 		return;
 	}
-
+	
+	// Set the random seed
+	//srand(time(NULL));
+	random_device rd;
+	mt19937 gen(rd());
+	uniform_real_distribution<> dis(0, 1);
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-	glm::vec4 lightPosition(-100.0f, 2.0, 0.0f, 1.0f);
-	glm::vec4 lastPos = lightPosition;
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
-		// These are just some messed up light positions. TODO: Come back and place them logically
-		light.color = glm::vec4(1.0f);
-
-		light.position = glm::vec4(lastPos.x + 10.0f, lightPosition.y, lightPosition.z, lightPosition.w);
-		lastPos = light.position;
-		//light.radius = 1.5f;
-		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 5.5f);
+		light.position = glm::vec4(RandomPosition(dis, gen), 1.0);
+		light.color = glm::vec4(1.0f + dis(gen), 1.0f + dis(gen), 1.0f + dis(gen), 1.0f);
+		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), LIGHT_RADIUS);
 	}
 
-	PointLight &light = pointLights[0];
-	//light.position = glm::vec4(-lightPosition.x, lightPosition.y, 1.0f, lightPosition.w);
-	light.color = glm::vec4(1.0f);
-	//light.position = glm::vec4(5.0f, lightPosition.y, lightPosition.z, lightPosition.w);
-	//light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), 3.0f);
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+void UpdateLights(float deltaTime) {
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+	PointLight *pointLights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		PointLight &light = pointLights[i];
+		float min = lightMinBounds[1];
+		float max = lightMaxBounds[1];
+
+		light.position.y = fmod((light.position.y + lightDeltaTime - min + max), max) + min;
+	}
+
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
@@ -336,6 +354,9 @@ int main(int argc, char **argv) {
 	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", NULL);
 
+	Shader particleShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\particle.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\particle.frag.glsl", NULL);
+
 	/*
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.vert.glsl",
 	"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map_depth.frag.glsl",
@@ -385,6 +406,8 @@ int main(int argc, char **argv) {
 	Model testModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\crytek-sponza\\sponza.obj");
 	// init scene stuff (set up buffers for culling)
 	InitScene();
+	particleShader.Use();
+	LoadLights(particleShader);
 
 
 
@@ -398,6 +421,8 @@ int main(int argc, char **argv) {
 		// Check and call events
 		glfwPollEvents();
 		Movement();
+
+		UpdateLights(0.0f);
 
 		glm::mat4 model;
 		//model = glm::translate(model, glm::vec3(0.0f, -1.75f, 0.0f));
@@ -515,22 +540,43 @@ int main(int argc, char **argv) {
 
 
 
-		// render the light sources
-		//glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
-		//PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
 
-		for (int i = 0; i < 1; i++) {
+		/*
+		// render lights as billboarded particles
+		particleShader.Use();
 
-			//PointLight &test = lights[i];
+		glUniformMatrix4fv(glGetUniformLocation(particleShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(particleShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(particleShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
+
+		DrawLights(particleShader);
+		*/
+
+
+
+
+		// render the light sources/
+		/*
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+		PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+		for (int i = 0; i < NUM_LIGHTS; i++) {
+
+			PointLight &test = lights[i];
 
 			//glm::vec3 pos = glm::vec3(-400.0, 5.0, 0.0);
-			//model = glm::mat4();
-			//model = glm::translate(model, glm::vec3(pos));
+			model = glm::mat4();
+			model = glm::translate(model, glm::vec3(test.position));
 			//model = glm::scale(model, glm::vec3(0.1f));
-			//glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-			//RenderQuad();
+			glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+			RenderQuad();
 		}
 		
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+		*/
+
 
 		glfwSwapBuffers(gWindow);
 	}
@@ -539,6 +585,124 @@ int main(int argc, char **argv) {
 	glfwTerminate();
 
 	return 0;
+}
+
+void LoadLights(Shader shader) {
+	// Put the three verticies into the VBO
+
+	std::vector<glm::vec3> lightPositions;
+	std::vector<glm::vec3> lightColors;
+	std::vector<float> lightRadii;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+	PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+	// Need to get all the data
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		PointLight &light = lights[i];
+		glm::vec3 posiion = glm::vec3(light.position);
+		glm::vec3 color = glm::vec3(light.color);
+		float radius = light.paddingAndRadius.w;
+
+		lightPositions.push_back(posiion);
+		lightColors.push_back(color);
+		lightRadii.push_back(radius);
+	}
+
+
+	glGenVertexArrays(1, &gVAO);
+	glBindVertexArray(gVAO);
+
+	glGenBuffers(1, &gBufLightPosition);
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightPosition);
+	glBufferData(GL_ARRAY_BUFFER, NUM_LIGHTS * sizeof(glm::vec3), \
+		&lightPositions, GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "position"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "position"), 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glGenBuffers(1, &gBufLightColor);
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightColor);
+	glBufferData(GL_ARRAY_BUFFER, NUM_LIGHTS * sizeof(glm::vec3), \
+		&lightColors, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "color"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "color"), 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glGenBuffers(1, &gBufLightRadius);
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightRadius);
+	glBufferData(GL_ARRAY_BUFFER, NUM_LIGHTS * sizeof(float), \
+		&lightRadii, GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "radii"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "radii"), 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
+void DrawLights(Shader shader) {
+	std::vector<glm::vec3> lightPositions;
+	std::vector<glm::vec3> lightColors;
+	std::vector<float> lightRadii;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
+	PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+
+	// Need to get all the data
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		PointLight &light = lights[i];
+		glm::vec3 posiion = glm::vec3(light.position);
+		glm::vec3 color = glm::vec3(light.color);
+		float radius = light.paddingAndRadius.w;
+
+		lightPositions.push_back(posiion);
+		lightColors.push_back(color - 1.0f);
+		lightRadii.push_back(radius);
+	}
+
+
+	// need a new shader program
+	//shader.Use();
+
+	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+
+	// TODO: set model, view and projection here or outside?
+
+
+	glBindVertexArray(gVAO);
+
+
+	//bind the VBO
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightPosition);
+	glBufferData(GL_ARRAY_BUFFER, lightPositions.size() * sizeof(glm::vec3), &lightPositions[0], GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "position"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "position"), 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	//bind the VBO
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightRadius);
+	glBufferData(GL_ARRAY_BUFFER, lightRadii.size() * sizeof(float), &lightRadii[0], GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "radii"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "radii"), 1, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	//bind the VBO
+	glBindBuffer(GL_ARRAY_BUFFER, gBufLightColor);
+	glBufferData(GL_ARRAY_BUFFER, lightColors.size() * sizeof(glm::vec3), &lightColors[0], GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(glGetAttribLocation(shader.Program, "color"));
+	glVertexAttribPointer(glGetAttribLocation(shader.Program, "color"), 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glDrawArrays(GL_POINTS, 0, NUM_LIGHTS);
+
+	// unbind the VAO
+	glBindVertexArray(0);
+
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 
