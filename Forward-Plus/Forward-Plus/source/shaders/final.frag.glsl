@@ -36,7 +36,7 @@ uniform sampler2D texture_specular1;
 
 
 // TODO: Will this be right? DO some of them have multiple normal maps?
-uniform sampler2D texture_normal1;
+uniform sampler2D texture_normal1; // how to tell if this is active or not?
 
 
 uniform int numberOfTilesX;
@@ -47,37 +47,15 @@ uniform vec3 u_viewPosition;
 
 out vec4 fragColor;
 
-float attenuate(float lightDistance, float radius) {
-	float d = max(lightDistance - radius, 0);
-	float denom = d / radius + 1;
-	float attenuation = 1 / (denom * denom);
-	float cutoff = 0.1;
-	attenuation = (attenuation - cutoff) / (1 - cutoff);
-	attenuation = max(attenuation, 0);
 
-	return attenuation;
-}
+float attenuate(vec3 ldir, float radius) {
 
 
-float attenuate2(vec3 ldir, float radius) {
-
-
-	//float atten = dot(ldir, ldir) / (0.001 * radius);
-	float atten = 1.0;
+	float atten = dot(ldir, ldir) / (8.0 * radius);
 	atten = 1.0 / (atten * 15.0 + 1.0);
 	atten = (atten - 0.0625) * 1.066666;
 
 	return clamp(atten, 0.0, 1.0);
-}
-
-float attenuate3(float lightDistance, float radius) {
-	float lin = 0.09;
-	float constant = 1.0;
-	float quadratic = 0.032;
-	float attenuation = 1.0f / (constant + lin * lightDistance +
-		quadratic * (lightDistance * lightDistance));
-
-	return attenuation;
 }
 
 void main() {
@@ -140,12 +118,7 @@ void main() {
 		
 		float lightDistance = length(lightDirection);
 
-		//float attenuation = attenuate3(lightDistance, lightRadius);
-		float attenuation = attenuate2(lightDirection, lightRadius);
-		//attenuation *= 100000.0;
-		//attenuation = 1.0;
-		//float attenuation = attenuate(lightDirection, lightRadius);
-		//attenuation = 0.5;
+		float attenuation = attenuate(lightDirection, lightRadius);
 		lightDirection = normalize(lightDirection);
 
 
