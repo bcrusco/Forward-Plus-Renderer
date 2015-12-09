@@ -22,7 +22,7 @@ using namespace std;
 const glm::ivec2 SCREEN_SIZE(1280, 720);
 
 const int NUM_LIGHTS = 100;
-const float LIGHT_RADIUS = 200;
+const float LIGHT_RADIUS = 5.5f;
 
 GLFWwindow* gWindow;
 GLuint gVAO = 0;
@@ -36,6 +36,8 @@ GLuint visibleLightIndicesBuffer = 0; // visible lights after culling=
 GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
 
+glm::vec3 directionalLightPosition = glm::vec3(0.0f, 100.0f, 0.0f);
+glm::vec3 directionalLightDirection = glm::normalize(directionalLightPosition - glm::vec3(0.0, 0.0, 0.0));
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;

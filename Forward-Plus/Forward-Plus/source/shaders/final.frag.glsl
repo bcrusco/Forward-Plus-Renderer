@@ -33,24 +33,18 @@ layout(std430, binding = 1) buffer VisibleLightIndicesBuffer {
 
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
-
-
-// TODO: Will this be right? DO some of them have multiple normal maps?
-uniform sampler2D texture_normal1; // how to tell if this is active or not?
-
+uniform sampler2D texture_normal1;
+uniform sampler2D shadowMap;
 
 uniform int numberOfTilesX;
 
-
-//uniform vec3 u_viewPosition;
-
+uniform vec3 u_lightPosition; // this is for the directional light
+uniform vec3 u_lightDir; //TODO: Double check this stuff
 
 out vec4 fragColor;
 
 
 float attenuate(vec3 ldir, float radius) {
-
-
 	float atten = dot(ldir, ldir) / (100 * radius);
 	atten = 1.0 / (atten * 15.0 + 1.0);
 	float cutoff = 0.5;
@@ -60,9 +54,66 @@ float attenuate(vec3 ldir, float radius) {
 	return clamp(atten, 0.0, 1.0);
 }
 
+
+
+
+// PCF shadow calculation
+float shadowCalculation(vec4 fragmentPositionLightSpace, vec3 normal) {
+	// Do perspective divide, then transform to 0 - 1 range
+	vec3 projectionCoordinates = fragmentPositionLightSpace.xyz / fragmentPositionLightSpace.xyz;
+	projectionCoordinates = projectionCoordinates * 0.5 + 0.5;
+
+	// Then we get the closest depth value from the light's perspective
+	float closestDepth = texture(shadowMap, projectionCoordinates.xy).r;
+	// Get depth of current fragment from light's perspective
+	float currentDepth = projectionCoordinates.z;
+
+	// Calculate the bias based on map resolution and slope
+	// TODO: This might be incorrect
+	vec3 lightDirection = normalize(u_lightPosition - fragment_in.tangentFragmentPosition);
+	float bias = max(0.05 * (1.0 - dot(normal, lightDirection)), 0.005);
+
+	// Perform PCP and check whether the current fragment position is in shadow
+	float shadow = 0.0;
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+	for (int x = -1; x <= 1; x++) {
+		for (int y = -1; y <= 1; y++) {
+			float pcfDepth = texture(shadowMap, projectionCoordinates.xy + vec2(x, y) * texelSize).r;
+			shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+		}
+	}
+	shadow /= 9.0;
+
+	// Clamp the shadow at 0 when we are outside the far plane region of the frustum
+	if (projectionCoordinates.z > 1.0) {
+		shadow = 0.0;
+	}
+
+	return shadow;
+}
+
+
+// some function to do directional light with shadow map
+//vec3?4? return color
+vec3 directionalLightCalculation(vec3 normal, vec3 viewDirection, vec4 base_diffuse, vec4 base_specular) {
+	//TODO: Double check this!
+	//wait it can't be right
+	//vec3 lightDirection = normalize(lightPosition - fragment_in.tangentFragmentPosition);
+	vec3 lightDirection = normalize(-u_lightDir);
+	vec3 halfway = normalize(lightDirection + viewDirection);
+
+	float diff = max(dot(lightDirection, normal), 0.0);
+	float spec = pow(max(dot(halfway, normal), 0.0), 80.0); //replace with shininess property later
+
+	vec3 ambient = 0.1 * base_diffuse.rgb; //light color?
+	vec3 diffuse = base_diffuse.rgb * diff;
+	vec3 specular = base_specular.rgb * spec;
+
+	vec3 lightColor = vec3(1.0); // temp
+	return (ambient + diffuse + specular) * lightColor * 2;
+}
+
 void main() {
-
-
 	ivec2 location = ivec2(gl_FragCoord.xy);
 	ivec2 tileID = location / ivec2(16, 16);
 	int index = tileID.y * numberOfTilesX + tileID.x;
@@ -71,6 +122,7 @@ void main() {
 	vec4 base_specular = texture(texture_specular1, fragment_in.textureCoordinates);
 	vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
 
+	
 
 
 	//vec3 normal = normalize(fragment_in.normal);
@@ -80,14 +132,15 @@ void main() {
 	normal = normalize(normal * 2.0 - 1.0);
 	//vec3 normal = normalize(fragment_in.normal);
 
-
-
-
-
-
-
 	//vec3 viewDirection = normalize(u_viewPosition - fragment_in.fragmentPosition);
 	vec3 viewDirection = normalize(fragment_in.tangentViewPosition - fragment_in.tangentFragmentPosition);
+
+	//do the directional light and add it to the color?
+	color.rgb += directionalLightCalculation(normal, viewDirection, base_diffuse, base_specular);
+
+
+
+	
 
 
 	// Ok so in my version I won't know what the size of the data is (just the max)
@@ -164,8 +217,8 @@ void main() {
 		discard;
 	}
 
-	fragColor = vec4(clamp(color.rgb, 0.0, 1.0), color.a);
-	//fragColor = color;
+	//fragColor = vec4(clamp(color.rgb, 0.0, 1.0), color.a);
+	fragColor = color;
 	//vec4 test = vec4(vec3(float(i) / 2.0), 1.0);
 	//fragColor = test;
 

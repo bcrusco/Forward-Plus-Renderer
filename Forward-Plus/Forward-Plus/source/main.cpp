@@ -530,6 +530,10 @@ int main(int argc, char **argv) {
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
 
+		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &directionalLightPosition[0]);
+		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightDir"), 1, &directionalLightDirection[0]);
+
+
 		// Testing. Disable normal maps by default (will be enabled if they exist) by sending -1
 		glUniform1i(glGetUniformLocation(shader.Program, "texture_normal1"), -1);
 
