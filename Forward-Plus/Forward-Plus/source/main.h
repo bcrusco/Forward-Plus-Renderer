@@ -61,7 +61,7 @@ GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
 
 // Camera object
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(-40.0f, 10.0f, 0.0f));
 
 // Creates window and initializes GLFW
 void InitGLFW(int argc, char* argv[]);

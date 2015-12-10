@@ -42,19 +42,6 @@ void Camera::ProcessMouseMovement(GLfloat xOffset, GLfloat yOffset, GLboolean co
 	this->Update();
 }
 
-// Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
-void Camera::ProcessMouseScroll(GLfloat yOffset) {
-	if (this->zoom >= 1.0f && this->zoom <= 45.0f) {
-		this->zoom -= yOffset;
-	}
-	if (this->zoom <= 1.0f) {
-		this->zoom = 1.0f;
-	}
-	if (this->zoom >= 45.0f) {
-		this->zoom = 45.0f;
-	}
-}
-
 void Camera::Update() {
 	glm::vec3 front;
 	front.x = cos(glm::radians(this->yaw)) * cos(glm::radians(this->pitch));
