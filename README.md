@@ -1,8 +1,6 @@
 Forward+ Renderer
 ================
 
-
-
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Final Project**
 
 * **Bradley Crusco(( (Personal Site: http://bradleycrusco.com, LinkedIn: https://linkedin.com/in/bcrusco
