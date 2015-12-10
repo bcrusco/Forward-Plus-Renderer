@@ -208,6 +208,8 @@ int main(int argc, char **argv) {
 
 	// Load in our scene models
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
+	// Modified the Crytek Sponza model for use in our scene
+	// http://www.crytek.com/cryengine/cryengine3/downloads
 	Model sponzaModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\crytek-sponza\\sponza.obj");
 	// init scene stuff (set up buffers for culling)
 	InitScene();
@@ -218,14 +220,14 @@ int main(int argc, char **argv) {
 
 	// For each shader, bind the uniforms that will during the program's execution
 	depthShader.Use();
-	glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
 	computeShader.Use();
 	glUniform1i(glGetUniformLocation(computeShader.Program, "lightCount"), NUM_LIGHTS);
 	glUniform2iv(glGetUniformLocation(computeShader.Program, "screenSize"), 1, &SCREEN_SIZE[0]);
 
 	shader.Use();
-	glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 
 	// Run while the window is open
@@ -248,8 +250,8 @@ int main(int argc, char **argv) {
 
 		// Step 1: Render the depth of the scene to texture
 		depthShader.Use();
-		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		
 		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
@@ -290,9 +292,9 @@ int main(int argc, char **argv) {
 		//glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
 
 		
-		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &cameraPosition[0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniform3fv(glGetUniformLocation(shader.Program, "viewPosition"), 1, &cameraPosition[0]);
 		
 
 		sponzaModel.Draw(shader);
