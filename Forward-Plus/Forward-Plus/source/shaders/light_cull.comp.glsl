@@ -45,7 +45,7 @@ void main() {
 	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
 	ivec2 tileID = ivec2(gl_WorkGroupID.xy);
 	ivec2 tileNumber = ivec2(gl_NumWorkGroups.xy);
-	int index = tileID.y * tileNumber.x + tileID.x;
+	uint index = tileID.y * tileNumber.x + tileID.x;
 
 	// Initialize shared global values for depth and light count
 	if (gl_LocalInvocationIndex == 0) {
