@@ -508,7 +508,7 @@ int main(int argc, char **argv) {
 
 		// What texture do I have to bind? nothing for now?
 		glActiveTexture(GL_TEXTURE4);
-		glUniform1i(glGetUniformLocation(computeShader.Program, "u_depthTexture"), 4);
+		glUniform1i(glGetUniformLocation(computeShader.Program, "depthMap"), 4);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glUniform1i(glGetUniformLocation(computeShader.Program, "lightCount"), NUM_LIGHTS);
 
