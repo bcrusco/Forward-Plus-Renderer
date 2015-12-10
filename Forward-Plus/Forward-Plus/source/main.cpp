@@ -48,23 +48,24 @@ void InitGLFW(int argc, char* argv[]) {
 }
 
 void InitScene() {
+	// Define work group sizes in x and y direction based off screen size and tile size (in pixels)
 	workGroupsX = (SCREEN_SIZE.x + (SCREEN_SIZE.x % 16)) / 16;
 	workGroupsY = (SCREEN_SIZE.y + (SCREEN_SIZE.y % 16)) / 16;
-
 	size_t numberOfTiles = workGroupsX * workGroupsY;
 
+	// Generate our shader storage buffers
 	glGenBuffers(1, &lightBuffer);
 	glGenBuffers(1, &visibleLightIndicesBuffer);
 
-	// TODO: Double check all of these sizes
-	// bind light buffer
+	// Bind light buffer
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, NUM_LIGHTS * sizeof(PointLight), 0, GL_DYNAMIC_DRAW);
 
-	// bind visible light indices buffer
+	// Bind visible light indices buffer
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, visibleLightIndicesBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, numberOfTiles * sizeof(VisibleIndex) * 1024, 0, GL_STATIC_DRAW);
 
+	// Set the default values for the light buffer
 	SetupLights();
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -73,8 +74,8 @@ void InitScene() {
 glm::vec3 RandomPosition(uniform_real_distribution<> dis, mt19937 gen) {
 	glm::vec3 position = glm::vec3(0.0);
 	for (int i = 0; i < 3; i++) {
-		float min = lightMinBounds[i];
-		float max = lightMaxBounds[i];
+		float min = LIGHT_MIN_BOUNDS[i];
+		float max = LIGHT_MAX_BOUNDS[i];
 		position[i] = (GLfloat)dis(gen) * (max - min) + min;
 	}
 
@@ -95,7 +96,7 @@ void SetupLights() {
 
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
-		light.position = glm::vec4(RandomPosition(dis, gen), 1.0);
+		light.position = glm::vec4(RandomPosition(dis, gen), 1.0f);
 		light.color = glm::vec4(1.0f + dis(gen), 1.0f + dis(gen), 1.0f + dis(gen), 1.0f);
 		light.paddingAndRadius = glm::vec4(glm::vec3(0.0f), LIGHT_RADIUS);
 	}
@@ -110,10 +111,10 @@ void UpdateLights() {
 
 	for (int i = 0; i < NUM_LIGHTS; i++) {
 		PointLight &light = pointLights[i];
-		float min = lightMinBounds[1];
-		float max = lightMaxBounds[1];
+		float min = LIGHT_MIN_BOUNDS[1];
+		float max = LIGHT_MAX_BOUNDS[1];
 
-		light.position.y = fmod((light.position.y + lightDeltaTime - min + max), max) + min;
+		light.position.y = fmod((light.position.y + LIGHT_DELTA_TIME - min + max), max) + min;
 	}
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
@@ -162,35 +163,35 @@ static void MouseCallback(GLFWwindow *window, double x, double y) {
 		firstMouse = false;
 	}
 
-	GLfloat xoffset = (GLfloat)x - lastX;
-	GLfloat yoffset = lastY - (GLfloat)y;
+	GLfloat xOffset = (GLfloat)x - lastX;
+	GLfloat yOffset = lastY - (GLfloat)y;
 
 	lastX = (GLfloat)x;
 	lastY = (GLfloat)y;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
+	camera.ProcessMouseMovement(xOffset, yOffset);
 }
 
 int main(int argc, char **argv) {
 	InitGLFW(argc, argv);
 
+	// TODO: Make these directories relative to root directory of project
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.frag.glsl", NULL);
-	Shader computeShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_cull.comp.glsl");
-	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
-		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", NULL);
+	Shader lightCullingShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_culling.comp.glsl");
+	Shader lightAccumulationShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.frag.glsl", NULL);
 
 	// So we need to create a depth map FBO
 	// This will be used in the depth pass
-	const GLuint SCREEN_WIDTH = SCREEN_SIZE.x, SCREEN_HEIGHT = SCREEN_SIZE.y;
+	// Create a depth map frame buffer object and texture
 	GLuint depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
-	// - Create depth texture
+
 	GLuint depthMap;
 	glGenTextures(1, &depthMap);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCREEN_SIZE.x, SCREEN_SIZE.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -204,14 +205,13 @@ int main(int argc, char **argv) {
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
 	// Load in our scene models
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
 	// Modified the Crytek Sponza model for use in our scene
 	// http://www.crytek.com/cryengine/cryengine3/downloads
 	Model sponzaModel("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\crytek-sponza\\sponza.obj");
-	// init scene stuff (set up buffers for culling)
+
+	// Initialize the scene by setting up the buffers and assigning default values
 	InitScene();
 
 	// Scale and get the model view transformation matrix
@@ -222,16 +222,21 @@ int main(int argc, char **argv) {
 	depthShader.Use();
 	glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
-	computeShader.Use();
-	glUniform1i(glGetUniformLocation(computeShader.Program, "lightCount"), NUM_LIGHTS);
-	glUniform2iv(glGetUniformLocation(computeShader.Program, "screenSize"), 1, &SCREEN_SIZE[0]);
+	lightCullingShader.Use();
+	glUniform1i(glGetUniformLocation(lightCullingShader.Program, "lightCount"), NUM_LIGHTS);
+	glUniform2iv(glGetUniformLocation(lightCullingShader.Program, "screenSize"), 1, &SCREEN_SIZE[0]);
 
-	shader.Use();
-	glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
-	glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
+	lightAccumulationShader.Use();
+	glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniform1i(glGetUniformLocation(lightAccumulationShader.Program, "numberOfTilesX"), workGroupsX);
+
+	// Set viewport dimensions and background color
+	glViewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y);
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
 	// Run while the window is open
 	while (!glfwWindowShouldClose(gWindow)) {
+		// Calculate the delta time used for movement (not for animating the lights)
 		GLfloat currentFrame = (GLfloat)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -248,63 +253,59 @@ int main(int argc, char **argv) {
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::vec3 cameraPosition = camera.position;
 
-		// Step 1: Render the depth of the scene to texture
+		// Step 1: Render the depth of the scene to a depth map
 		depthShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		
-		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		// Bind the depth map's frame buffer and draw the depth map to it
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		sponzaModel.Draw(depthShader);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		// Step 2: Perform light culling on point lights in the scene
-		computeShader.Use();
-		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		lightCullingShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(lightCullingShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(lightCullingShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-		// What texture do I have to bind? nothing for now?
+		// Bind depth map texture to texture location 4 (which will not be used by any model texture)
 		glActiveTexture(GL_TEXTURE4);
-		glUniform1i(glGetUniformLocation(computeShader.Program, "depthMap"), 4);
+		glUniform1i(glGetUniformLocation(lightCullingShader.Program, "depthMap"), 4);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		
-		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(computeShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
+		// Bind shader storage buffer objects for the light and indice buffers
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, lightBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, visibleLightIndicesBuffer);
 
 
-		// do the compute dispatch
+		// Dispatch the compute shader, using the workgroup values calculated earlier
 		glDispatchCompute(workGroupsX, workGroupsY, 1);
 
+		// Unbind the depth map
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
-
-
-
 		// Step 3: Accumulate the remaining lights after culling and render
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		shader.Use();
+		lightAccumulationShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniform3fv(glGetUniformLocation(lightAccumulationShader.Program, "viewPosition"), 1, &cameraPosition[0]);
+
+		// Blending might be needed if we add additional passes, but may not work correctly with objects with transparency masks
+		// Disabled for now
 		//glEnable(GL_BLEND);
 		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		//glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
 
-		
-		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniform3fv(glGetUniformLocation(shader.Program, "viewPosition"), 1, &cameraPosition[0]);
-		
+		sponzaModel.Draw(lightAccumulationShader);
 
-		sponzaModel.Draw(shader);
+		//glDisable(GL_BLEND);
 
-		glActiveTexture(GL_TEXTURE4);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
+		// Unbind the shader object buffers
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-		//glDisable(GL_BLEND);
 		
 		glfwSwapBuffers(gWindow);
 	}

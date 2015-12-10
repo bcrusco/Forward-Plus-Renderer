@@ -38,8 +38,8 @@ shared mat4 viewProjection;
 // Took some light culling guidance from Dice's deferred renderer
 // http://www.dice.se/news/directx-11-rendering-battlefield-3/
 
-#define BLOCK_SIZE 16
-layout(local_size_x = BLOCK_SIZE, local_size_y = BLOCK_SIZE, local_size_z = 1) in;
+#define TILE_SIZE 16
+layout(local_size_x = TILE_SIZE, local_size_y = TILE_SIZE, local_size_z = 1) in;
 void main() {
 	ivec2 location = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 itemID = ivec2(gl_LocalInvocationID.xy);
@@ -107,7 +107,7 @@ void main() {
 	// Step 3: Cull lights.
 	// Parallelize the threads against the lights now.
 	// Can handle 256 simultaniously. Anymore lights than that and additional passes are performed
-	uint threadCount = BLOCK_SIZE * BLOCK_SIZE;
+	uint threadCount = TILE_SIZE * TILE_SIZE;
 	uint passCount = (lightCount + threadCount - 1) / threadCount;
 	for (uint i = 0; i < passCount; i++) {
 		// Get the lightIndex to test for this thread / pass. If the index is >= light count, then this thread can stop testing lights
