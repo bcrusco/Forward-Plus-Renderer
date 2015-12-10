@@ -2,10 +2,10 @@
 
 in VERTEX_OUT{
 	vec3 fragmentPosition;
-	vec4 fragmentPositionLightSpace;
+	//vec4 fragmentPositionLightSpace;
 	vec2 textureCoordinates;
 	mat3 TBN;
-	vec3 tangentLightPosition;
+	//vec3 tangentLightPosition;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
 	
@@ -37,8 +37,8 @@ uniform sampler2D shadowMap;
 
 uniform int numberOfTilesX;
 
-uniform vec3 u_lightPosition; // this is for the directional light
-uniform vec3 u_lightDir; //TODO: Double check this stuff
+//uniform vec3 u_lightPosition; // this is for the directional light
+//uniform vec3 u_lightDir; //TODO: Double check this stuff
 
 out vec4 fragColor;
 
@@ -54,6 +54,7 @@ float attenuate(vec3 ldir, float radius) {
 }
 
 // PCF shadow calculation
+/*
 float shadowCalculation(vec4 fragmentPositionLightSpace, vec3 normal) {
 	// Do perspective divide, then transform to 0 - 1 range
 	vec3 projectionCoordinates = fragmentPositionLightSpace.xyz / fragmentPositionLightSpace.xyz;
@@ -87,10 +88,12 @@ float shadowCalculation(vec4 fragmentPositionLightSpace, vec3 normal) {
 
 	return shadow;
 }
+*/
 
 
 // some function to do directional light with shadow map
 //vec3?4? return color
+/*
 vec3 directionalLightCalculation(vec3 normal, vec3 viewDirection, vec4 base_diffuse, vec4 base_specular) {
 	//TODO: Double check this!
 	//wait it can't be right. but it is for shadows?
@@ -101,18 +104,19 @@ vec3 directionalLightCalculation(vec3 normal, vec3 viewDirection, vec4 base_diff
 	float diff = max(dot(lightDirection, normal), 0.0);
 	float spec = pow(max(dot(halfway, normal), 0.0), 80.0); //replace with shininess property later
 
-	vec3 ambient = 0.2 * base_diffuse.rgb; //light color?
+	vec3 ambient = 0.1 * base_diffuse.rgb; //light color?
 	vec3 diffuse = base_diffuse.rgb * diff;
 	vec3 specular = base_specular.rgb * spec;
 
 	vec3 lightColor = vec3(1.0); // temp
 
 	float shadow = shadowCalculation(fragment_in.fragmentPositionLightSpace, normal);
-	shadow = min(shadow, 0.75); // reduce strength to allow for some diffuse and spec light in shadowed region (configure later)
+	shadow = min(shadow, 1.0); // reduce strength to allow for some diffuse and spec light in shadowed region (configure later)
 	vec3 lighting = lightColor * (ambient + (1.0 - shadow) * (diffuse + specular));
 	return lighting;
 	//return (ambient + diffuse + specular) * lightColor;
 }
+*/
 
 void main() {
 	ivec2 location = ivec2(gl_FragCoord.xy);
@@ -137,10 +141,7 @@ void main() {
 	vec3 viewDirection = normalize(fragment_in.tangentViewPosition - fragment_in.tangentFragmentPosition);
 
 	//do the directional light and add it to the color?
-	color.rgb += directionalLightCalculation(normal, viewDirection, base_diffuse, base_specular);
-
-
-	
+	//color.rgb += directionalLightCalculation(normal, viewDirection, base_diffuse, base_specular);
 
 
 	// Ok so in my version I won't know what the size of the data is (just the max)

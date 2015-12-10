@@ -8,10 +8,10 @@ layout (location = 4) in vec3 bitangent;
 
 out VERTEX_OUT {
 	vec3 fragmentPosition;
-	vec4 fragmentPositionLightSpace;
+	//vec4 fragmentPositionLightSpace;
 	vec2 textureCoordinates;
 	mat3 TBN;
-	vec3 tangentLightPosition;
+	//vec3 tangentLightPosition;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
 } vertex_out;
@@ -60,12 +60,12 @@ void main() {
 	mat3 TBN = transpose(mat3(tan, bitan, norm));
 
 
-	vertex_out.tangentLightPosition = TBN * u_lightPosition;
+	//vertex_out.tangentLightPosition = TBN * u_lightPosition;
 
 
 	
 	vertex_out.tangentViewPosition = TBN * u_viewPosition;
 	vertex_out.tangentFragmentPosition = TBN * vertex_out.fragmentPosition;
 	vertex_out.TBN = TBN;
-	vertex_out.fragmentPositionLightSpace = u_lightSpace * vec4(vertex_out.tangentFragmentPosition, 1.0);
+	//vertex_out.fragmentPositionLightSpace = u_lightSpace * vec4(vertex_out.tangentFragmentPosition, 1.0);
 }
