@@ -63,7 +63,6 @@ void initGLFW(int argc, char* argv[]) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE); // THis won't mess with transparancy right?
-	glEnable(GL_STENCIL_TEST);
 
 	glfwSetKeyCallback(gWindow, keyCallback);
 	glfwSetCursorPosCallback(gWindow, mouseCallback);
@@ -345,6 +344,8 @@ std::string TextFileRead(const char *filename) {
 int main(int argc, char **argv) {
 	initGLFW(argc, argv);
 
+	glm::vec3 offset = directionalLightPosition - camera.position;
+
 
 	// Test compute shader
 	Shader computeShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_cull.comp.glsl");
@@ -473,12 +474,13 @@ int main(int argc, char **argv) {
 		//glBindTexture(GL_TEXTURE_2D, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+		glm::vec3 updateDirectionalPosition = camera.position + offset;
 
 		// Step 1.5: Render the depth of the scene to a texture from a directional light's perspective
 		glm::mat4 lightProjection, lightView;
 		glm::mat4 lightSpace;
-		lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 7.0f);
-		lightView = glm::lookAt(directionalLightPosition, glm::vec3(0.0f), glm::vec3(1.0)); //check
+		lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 0.1f, 300.0f);
+		lightView = glm::lookAt(updateDirectionalPosition, camera.position, glm::vec3(1.0)); //check
 		lightSpace = lightProjection * lightView;
 		shadowMapShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(shadowMapShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
@@ -588,7 +590,8 @@ int main(int argc, char **argv) {
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_lightSpace"), 1, GL_FALSE, glm::value_ptr(lightSpace));
 
-		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &directionalLightPosition[0]);
+		//vec3 test = updateDirectionalPosition
+		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &updateDirectionalPosition[0]);
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightDir"), 1, &directionalLightDirection[0]);
 
 
@@ -628,7 +631,7 @@ int main(int argc, char **argv) {
 
 		//glm::vec3 pos = glm::vec3(-400.0, 5.0, 0.0);
 		model = glm::mat4();
-		model = glm::translate(model, glm::vec3(directionalLightPosition));
+		model = glm::translate(model, glm::vec3(updateDirectionalPosition));
 		//model = glm::scale(model, glm::vec3(0.1f));
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 		RenderQuad();

@@ -36,8 +36,8 @@ GLuint visibleLightIndicesBuffer = 0; // visible lights after culling=
 GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
 
-glm::vec3 directionalLightPosition = glm::vec3(0.0f, 100.0, 0.0f);
-glm::vec3 directionalLightDirection = glm::normalize(glm::vec3(0.0, 0.0, -1.0));
+glm::vec3 directionalLightPosition = glm::vec3(0.0f, 20.0, 0.0f);
+glm::vec3 directionalLightDirection = glm::normalize(glm::vec3(0.0, 0.0, 0.0));
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;

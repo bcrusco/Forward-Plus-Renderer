@@ -21,7 +21,6 @@ uniform mat4 u_view;
 uniform mat4 u_model;
 uniform mat4 u_lightSpace;
 
-
 uniform vec3 u_lightPosition;
 
 
