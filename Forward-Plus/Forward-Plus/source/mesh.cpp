@@ -5,7 +5,6 @@
 Mesh::Mesh(vector<Vertex> vertices, vector<GLuint> indices, vector<Texture> textures) {
 	this->vertices = vertices;
 	this->indices = indices;
-	num_indices = this->indices.size();
 	this->textures = textures;
 
 	// Set vertex buffers and attribute pointers
@@ -48,8 +47,7 @@ void Mesh::Draw(Shader shader) {
 
 	// Draw mesh
 	glBindVertexArray(this->VAO);
-	//glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, 0);
-	glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, this->indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 
 	// Reset to defaults
@@ -72,10 +70,6 @@ void Mesh::SetupMesh() {
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, this->indices.size() * sizeof(GLuint), &this->indices[0], GL_STATIC_DRAW);
-
-	// Once this is done do I need the vertices and indices anymore?
-	this->vertices.clear();
-	this->indices.clear();
 
 	// Set the vertex attribute pointers
 	// Positions

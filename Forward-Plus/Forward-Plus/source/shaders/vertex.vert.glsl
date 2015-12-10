@@ -29,21 +29,7 @@ uniform vec3 u_viewPosition;
 void main() {
 
 	gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
-	// Why did I write these to be different?
 	vertex_out.fragmentPosition = vec3(u_model * vec4(position, 1.0));
-
-	//vertex_out.normal = transpose(inverse(mat3(u_model))) * normal;
-
-	// Reverse normals when we are inside the cube
-	// TODO: I can remove this now I think
-	/*
-	if(u_reverseNormals) {
-	vertex_out.normal = transpose(inverse(mat3(u_model))) * (-1.0 * normal);
-	}
-	else {
-	vertex_out.normal = transpose(inverse(mat3(u_model))) * normal;
-	}
-	*/
 
 	vertex_out.textureCoordinates = texCoords;
 

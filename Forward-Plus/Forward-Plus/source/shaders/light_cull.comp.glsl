@@ -23,8 +23,7 @@ layout(std430, binding = 1) writeonly buffer VisibleLightIndicesBuffer {
 uniform sampler2D depthMap;
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat4 viewProjection;
-uniform vec2 screenSize;
+uniform ivec2 screenSize;
 uniform int lightCount;
 
 // Shared values between all the threads in the group
@@ -34,6 +33,7 @@ shared uint visibleLightCount;
 shared vec4 frustumPlanes[6];
 // Shared local storage for visible indices, will be written out to the global buffer at the end
 shared int visibleLightIndices[1024];
+shared mat4 viewProjection;
 
 // Took some light culling guidance from Dice's deferred renderer
 // http://www.dice.se/news/directx-11-rendering-battlefield-3/
@@ -52,6 +52,7 @@ void main() {
 		minDepthInt = 0xFFFFFFFF;
 		maxDepthInt = 0;
 		visibleLightCount = 0;
+		viewProjection = projection * view;
 	}
 
 	barrier();
