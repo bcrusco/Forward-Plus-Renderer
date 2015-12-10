@@ -14,6 +14,7 @@ out VERTEX_OUT {
 	vec3 tangentFragmentPosition;
 } vertex_out;
 
+// Uniforms
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
@@ -29,6 +30,7 @@ void main() {
 	vec3 bitan = normalize(normalMatrix * bitangent);
 	vec3 norm = normalize(normalMatrix * normal);
 
+	// For tangent space normal mapping
 	mat3 TBN = transpose(mat3(tan, bitan, norm));
 	vertex_out.tangentViewPosition = TBN * viewPosition;
 	vertex_out.tangentFragmentPosition = TBN * vertex_out.fragmentPosition;
