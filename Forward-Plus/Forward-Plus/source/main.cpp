@@ -63,6 +63,7 @@ void initGLFW(int argc, char* argv[]) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE); // THis won't mess with transparancy right?
+	glEnable(GL_STENCIL_TEST);
 
 	glfwSetKeyCallback(gWindow, keyCallback);
 	glfwSetCursorPosCallback(gWindow, mouseCallback);
@@ -351,6 +352,9 @@ int main(int argc, char **argv) {
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.frag.glsl", NULL);
 
+	Shader shadowMapShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\shadow_map.frag.glsl", NULL);
+
 	Shader shader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\vertex.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\final.frag.glsl", NULL);
 
@@ -394,6 +398,33 @@ int main(int argc, char **argv) {
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
+	//glBindTexture(GL_TEXTURE_2D, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+
+	// Now configure a shadow map
+	const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	GLuint shadowMapFBO;
+	glGenFramebuffers(1, &shadowMapFBO);
+	// - Create depth texture
+	GLuint shadowMap;
+	glGenTextures(1, &shadowMap);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	//glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -434,19 +465,41 @@ int main(int argc, char **argv) {
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(depthShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
-
+		//glBindTexture(GL_TEXTURE_2D, depthMap);
 		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		testModel.Draw(depthShader);
+		//glBindTexture(GL_TEXTURE_2D, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
+		// Step 1.5: Render the depth of the scene to a texture from a directional light's perspective
+		glm::mat4 lightProjection, lightView;
+		glm::mat4 lightSpace;
+		lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 1.0f, 7.0f);
+		lightView = glm::lookAt(directionalLightPosition, glm::vec3(0.0f), glm::vec3(1.0)); //check
+		lightSpace = lightProjection * lightView;
+		shadowMapShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(shadowMapShader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(shadowMapShader.Program, "u_lightSpace"), 1, GL_FALSE, glm::value_ptr(lightSpace));
+		
+		//glActiveTexture(GL_TEXTURE5);
+
+		//glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		testModel.Draw(shadowMapShader);
+
+		//glBindTexture(GL_TEXTURE_2D, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 		// Step 2: do light culling
-		// TODO: test alpha values
 		computeShader.Use();
-
+		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
 		// What texture do I have to bind? nothing for now?
 		glActiveTexture(GL_TEXTURE4);
@@ -525,21 +578,29 @@ int main(int argc, char **argv) {
 		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		//glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
 
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glUniform1i(glGetUniformLocation(shader.Program, "shadowMap"), 4);
+
 		glUniform1i(glGetUniformLocation(shader.Program, "numberOfTilesX"), workGroupsX);
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_viewPosition"), 1, &camera.position[0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_lightSpace"), 1, GL_FALSE, glm::value_ptr(lightSpace));
 
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightPosition"), 1, &directionalLightPosition[0]);
 		glUniform3fv(glGetUniformLocation(shader.Program, "u_lightDir"), 1, &directionalLightDirection[0]);
 
 
 		// Testing. Disable normal maps by default (will be enabled if they exist) by sending -1
-		glUniform1i(glGetUniformLocation(shader.Program, "texture_normal1"), -1);
+		//glUniform1i(glGetUniformLocation(shader.Program, "texture_normal1"), -1);
 
 		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 
 		testModel.Draw(shader);
+
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
@@ -564,6 +625,13 @@ int main(int argc, char **argv) {
 
 
 		// render the light sources/
+
+		//glm::vec3 pos = glm::vec3(-400.0, 5.0, 0.0);
+		model = glm::mat4();
+		model = glm::translate(model, glm::vec3(directionalLightPosition));
+		//model = glm::scale(model, glm::vec3(0.1f));
+		glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
+		RenderQuad();
 		/*
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightBuffer);
 		PointLight *lights = (PointLight*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
@@ -574,15 +642,15 @@ int main(int argc, char **argv) {
 
 			//glm::vec3 pos = glm::vec3(-400.0, 5.0, 0.0);
 			model = glm::mat4();
-			model = glm::translate(model, glm::vec3(test.position));
+			model = glm::translate(model, glm::vec3(directionalLightPosition));
 			//model = glm::scale(model, glm::vec3(0.1f));
 			glUniformMatrix4fv(glGetUniformLocation(shader.Program, "u_model"), 1, GL_FALSE, glm::value_ptr(model));
 			RenderQuad();
 		}
-		
+		*/
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-		*/
+		
 
 
 		glfwSwapBuffers(gWindow);

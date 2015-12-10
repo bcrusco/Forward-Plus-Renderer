@@ -25,7 +25,9 @@ void main() {
 	pointScale = max(pointScale, minPointScale);
 	pointScale = min(pointScale, maxPointScale);
 
-    gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
-    gl_PointSize = radii;
+    gl_Position = u_projection * u_view * vec4(position, 1.0);
+
+	gl_PointSize = radii * pointScale;
+
     outColor = color;
 }

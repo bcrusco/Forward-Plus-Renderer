@@ -2,11 +2,10 @@
 
 in VERTEX_OUT{
 	vec3 fragmentPosition;
-	//vec3 normal;
+	vec4 fragmentPositionLightSpace;
 	vec2 textureCoordinates;
-	//vec3 tangentLightPosition;
-	
 	mat3 TBN;
+	vec3 tangentLightPosition;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
 	
@@ -54,9 +53,6 @@ float attenuate(vec3 ldir, float radius) {
 	return clamp(atten, 0.0, 1.0);
 }
 
-
-
-
 // PCF shadow calculation
 float shadowCalculation(vec4 fragmentPositionLightSpace, vec3 normal) {
 	// Do perspective divide, then transform to 0 - 1 range
@@ -97,20 +93,25 @@ float shadowCalculation(vec4 fragmentPositionLightSpace, vec3 normal) {
 //vec3?4? return color
 vec3 directionalLightCalculation(vec3 normal, vec3 viewDirection, vec4 base_diffuse, vec4 base_specular) {
 	//TODO: Double check this!
-	//wait it can't be right
-	//vec3 lightDirection = normalize(lightPosition - fragment_in.tangentFragmentPosition);
-	vec3 lightDirection = normalize(-u_lightDir);
+	//wait it can't be right. but it is for shadows?
+	vec3 lightDirection = normalize(fragment_in.tangentLightPosition - fragment_in.tangentFragmentPosition);
+	//vec3 lightDirection = normalize(-u_lightDir);
 	vec3 halfway = normalize(lightDirection + viewDirection);
 
 	float diff = max(dot(lightDirection, normal), 0.0);
 	float spec = pow(max(dot(halfway, normal), 0.0), 80.0); //replace with shininess property later
 
-	vec3 ambient = 0.1 * base_diffuse.rgb; //light color?
+	vec3 ambient = 0.2 * base_diffuse.rgb; //light color?
 	vec3 diffuse = base_diffuse.rgb * diff;
 	vec3 specular = base_specular.rgb * spec;
 
 	vec3 lightColor = vec3(1.0); // temp
-	return (ambient + diffuse + specular) * lightColor * 2;
+
+	float shadow = shadowCalculation(fragment_in.fragmentPositionLightSpace, normal);
+	shadow = min(shadow, 0.75); // reduce strength to allow for some diffuse and spec light in shadowed region (configure later)
+	vec3 lighting = lightColor * (ambient + (1.0 - shadow) * (diffuse + specular));
+	return lighting;
+	//return (ambient + diffuse + specular) * lightColor;
 }
 
 void main() {
@@ -137,7 +138,6 @@ void main() {
 
 	//do the directional light and add it to the color?
 	color.rgb += directionalLightCalculation(normal, viewDirection, base_diffuse, base_specular);
-
 
 
 	

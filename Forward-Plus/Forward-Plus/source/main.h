@@ -36,8 +36,8 @@ GLuint visibleLightIndicesBuffer = 0; // visible lights after culling=
 GLuint workGroupsX = 0;
 GLuint workGroupsY = 0;
 
-glm::vec3 directionalLightPosition = glm::vec3(0.0f, 100.0f, 0.0f);
-glm::vec3 directionalLightDirection = glm::normalize(directionalLightPosition - glm::vec3(0.0, 0.0, 0.0));
+glm::vec3 directionalLightPosition = glm::vec3(0.0f, 100.0, 0.0f);
+glm::vec3 directionalLightDirection = glm::normalize(glm::vec3(0.0, 0.0, -1.0));
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
@@ -64,7 +64,7 @@ void initGLFW(int argc, char* argv[]);
 
 void initShaders();
 
-// THis stuff should be moved to a scene class later
+// This stuff should be moved to a scene class later
 void InitScene();
 
 // Returns a random position for the light in the scene
