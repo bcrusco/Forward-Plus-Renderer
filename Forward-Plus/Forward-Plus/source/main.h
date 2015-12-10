@@ -22,7 +22,9 @@ using namespace std;
 // Renderer constants
 const glm::ivec2 SCREEN_SIZE(1920, 1080);
 const unsigned int NUM_LIGHTS = 500;
-const float LIGHT_RADIUS = 40.0f;
+const float LIGHT_RADIUS = 30.0f;
+const float NEAR_PLANE = 0.1f;
+const float FAR_PLANE = 300.0f;
 
 // Constants for light animations
 const glm::vec3 LIGHT_MIN_BOUNDS = glm::vec3(-135.0f, 0.0f, -60.0f);

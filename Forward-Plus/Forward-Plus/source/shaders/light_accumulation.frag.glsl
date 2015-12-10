@@ -31,7 +31,6 @@ layout(std430, binding = 1) readonly buffer VisibleLightIndicesBuffer {
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
 uniform sampler2D texture_normal1;
-uniform sampler2D shadowMap;
 uniform int numberOfTilesX;
 
 out vec4 fragColor;

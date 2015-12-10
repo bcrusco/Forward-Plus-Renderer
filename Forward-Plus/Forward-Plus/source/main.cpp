@@ -179,8 +179,17 @@ int main(int argc, char **argv) {
 	Shader depthShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth.frag.glsl", NULL);
 	Shader lightCullingShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_culling.comp.glsl");
+
+#if defined(DEPTH_DEBUG)
+	Shader depthDebugShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth_debug.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\depth_debug.frag.glsl", NULL);
+#elif defined(LIGHT_DEBUG)
+	Shader lightDebugShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_debug.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_debug.frag.glsl", NULL);
+#else
 	Shader lightAccumulationShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.frag.glsl", NULL);
+#endif
 
 	// So we need to create a depth map FBO
 	// This will be used in the depth pass
@@ -226,9 +235,21 @@ int main(int argc, char **argv) {
 	glUniform1i(glGetUniformLocation(lightCullingShader.Program, "lightCount"), NUM_LIGHTS);
 	glUniform2iv(glGetUniformLocation(lightCullingShader.Program, "screenSize"), 1, &SCREEN_SIZE[0]);
 
+#if defined(DEPTH_DEBUG)
+	depthDebugShader.Use();
+	glUniformMatrix4fv(glGetUniformLocation(depthDebugShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniform1f(glGetUniformLocation(depthDebugShader.Program, "near"),  NEAR_PLANE);
+	glUniform1f(glGetUniformLocation(depthDebugShader.Program, "far"),  FAR_PLANE);
+#elif defined(LIGHT_DEBUG)
+	lightDebugShader.Use();
+	glUniformMatrix4fv(glGetUniformLocation(lightDebugShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniform1i(glGetUniformLocation(lightDebugShader.Program, "totalLightCount"), NUM_LIGHTS);
+	glUniform1i(glGetUniformLocation(lightDebugShader.Program, "numberOfTilesX"), workGroupsX);
+#else
 	lightAccumulationShader.Use();
 	glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	glUniform1i(glGetUniformLocation(lightAccumulationShader.Program, "numberOfTilesX"), workGroupsX);
+#endif
 
 	// Set viewport dimensions and background color
 	glViewport(0, 0, SCREEN_SIZE.x, SCREEN_SIZE.y);
@@ -249,7 +270,7 @@ int main(int argc, char **argv) {
 		UpdateLights();
 
 		// Calculate new projection and view matrices and save current cameraPosition
-		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, 0.1f, 300.0f);
+		glm::mat4 projection = glm::perspective(camera.zoom, (float)SCREEN_SIZE.x / (float)SCREEN_SIZE.y, NEAR_PLANE, FAR_PLANE);
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::vec3 cameraPosition = camera.position;
 
@@ -286,8 +307,30 @@ int main(int argc, char **argv) {
 		glActiveTexture(GL_TEXTURE4);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
-		// Step 3: Accumulate the remaining lights after culling and render
+		// Step 3: Accumulate the remaining lights after culling and render (or execute one of the debug views of a flag is enabled
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Depth debug shader
+#if defined(DEPTH_DEBUG)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+
+		depthDebugShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(depthDebugShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(depthDebugShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+		sponzaModel.Draw(depthDebugShader);
+#elif defined(LIGHT_DEBUG)
+		lightDebugShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(lightDebugShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(lightDebugShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniform3fv(glGetUniformLocation(lightDebugShader.Program, "viewPosition"), 1, &cameraPosition[0]);
+
+		sponzaModel.Draw(lightDebugShader);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+#else
 		lightAccumulationShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -303,10 +346,10 @@ int main(int argc, char **argv) {
 
 		//glDisable(GL_BLEND);
 
-		// Unbind the shader object buffers
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
-		
+#endif
+
 		glfwSwapBuffers(gWindow);
 	}
 
