@@ -8,64 +8,29 @@ layout (location = 4) in vec3 bitangent;
 
 out VERTEX_OUT {
 	vec3 fragmentPosition;
-	//vec4 fragmentPositionLightSpace;
 	vec2 textureCoordinates;
 	mat3 TBN;
-	//vec3 tangentLightPosition;
 	vec3 tangentViewPosition;
 	vec3 tangentFragmentPosition;
 } vertex_out;
 
-uniform mat4 u_projection;
-uniform mat4 u_view;
-uniform mat4 u_model;
-uniform mat4 u_lightSpace;
-
-uniform vec3 u_lightPosition;
-
-
-uniform vec3 u_viewPosition;
+uniform mat4 projection;
+uniform mat4 view;
+uniform mat4 model;
+uniform vec3 viewPosition;
 
 void main() {
-
-	gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
-	// Why did I write these to be different?
-	vertex_out.fragmentPosition = vec3(u_model * vec4(position, 1.0));
-
-	//vertex_out.normal = transpose(inverse(mat3(u_model))) * normal;
-
-	// Reverse normals when we are inside the cube
-	// TODO: I can remove this now I think
-	/*
-	if(u_reverseNormals) {
-	vertex_out.normal = transpose(inverse(mat3(u_model))) * (-1.0 * normal);
-	}
-	else {
-	vertex_out.normal = transpose(inverse(mat3(u_model))) * normal;
-	}
-	*/
-
+	gl_Position = projection * view * model * vec4(position, 1.0);
+	vertex_out.fragmentPosition = vec3(model * vec4(position, 1.0));
 	vertex_out.textureCoordinates = texCoords;
 
-	
-	gl_Position = u_projection * u_view * u_model * vec4(position, 1.0);
-	vertex_out.fragmentPosition = vec3(u_model * vec4(position, 1.0)); // it should be right this way...
-	vertex_out.textureCoordinates = texCoords;
-
-	mat3 normalMatrix = transpose(inverse(mat3(u_model)));
+	mat3 normalMatrix = transpose(inverse(mat3(model)));
 	vec3 tan = normalize(normalMatrix * tangent);
 	vec3 bitan = normalize(normalMatrix * bitangent);
 	vec3 norm = normalize(normalMatrix * normal);
 
 	mat3 TBN = transpose(mat3(tan, bitan, norm));
-
-
-	//vertex_out.tangentLightPosition = TBN * u_lightPosition;
-
-
-	
-	vertex_out.tangentViewPosition = TBN * u_viewPosition;
+	vertex_out.tangentViewPosition = TBN * viewPosition;
 	vertex_out.tangentFragmentPosition = TBN * vertex_out.fragmentPosition;
 	vertex_out.TBN = TBN;
-	//vertex_out.fragmentPositionLightSpace = u_lightSpace * vec4(vertex_out.tangentFragmentPosition, 1.0);
 }

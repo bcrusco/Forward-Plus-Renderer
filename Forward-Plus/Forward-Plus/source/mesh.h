@@ -35,7 +35,6 @@ class Mesh {
 public:
 	vector<Vertex> vertices;
 	vector<GLuint> indices;
-	int num_indices;
 	vector<Texture> textures;
 	GLuint VAO;
 
