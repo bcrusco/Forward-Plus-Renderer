@@ -68,10 +68,10 @@ We implemented normal maps in an effort to get better visual fidelity from our s
 ### High Dynamic Range Lighting using Reinhard Tone Mapping
 
 #### Sponza Scene Rendered with HDR
-![](screenshots/HDR Cover.png "Crytek Sponza Rendered using Forward+")
+![](screenshots/HDR Comp.png "Crytek Sponza Rendered with HDR")
 
 #### Sponza Scene Rendered without HDR
-
+![](screenshots/Non HDR comp.png "Crytek Sponza Rendered without HDR")
 
 Adding high dynamic range lighting (HDR) to our renderer was a relatively simple task with huge benefits in image quality for our scene. Typically brithness and color values are clamped between the range of 0.0 and 1.0 when stored in the framebuffer. Our scene features many lights that are consantly overlapping, and we are freqently accumulating color values over 1.0 in our accumulation shading step. Since the framebuffer caps these values at 1.0, we lose all the intensity of those lights. For HDR we render our scene into a floating point framebuffer, which doesn't clamp our color range. Then, in a new HDR shader program, we perform Reinhard tone mapping, which converts the unbounded color variables back to a range of 0.0 - 1.0 which the computer display requires, but in a way that retains the detail we captured in the floating point framebuffer.
 
