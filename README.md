@@ -60,12 +60,7 @@ For final shader, we passed in the visible light count buffer and diffuse, specu
 
 
 
-### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 8 x 8)
-![](screenshots/light debug (1024 lights - 30r - 8 tile).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 8 x 8)")
 
-### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 16 x 16)
-
-![](screenshots/light debug (1024 lights - 30r).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 16 x 16)")
 
 
 ## Performance Analysis
@@ -87,7 +82,21 @@ In the a traditional forward renderer, for each fragment we calculate the light 
 
 We experimented with multipe different tile sizes before we landed on 16 x 16 pixel tiles. The most promising canidate was 8 x 8 tiles, and this was also the first size we tried, as it is the size used in the Forward+: Bringing Deferred Lighting to the Next Level paper. With 8 x 8, we achieved an average frame rate of 25.7 frames per second. Once we switched to 16 x 16 pixel tiles, our average jumped to 89.86. You can see those results in the chart below.
 
+#### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 8 x 8)
 
+![](screenshots/light debug (1024 lights - 30r - 8 tile).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 8 x 8)")
+
+#### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 16 x 16)
+
+![](screenshots/light debug (1024 lights - 30r).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 16 x 16)")
+
+#### Lights per Tile (1024 Lights, Radius = 50, Tile Size: 8 x 8)
+
+![](screenshots/light debug (1024 lights - 50r - tile 8).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 8 x 8)")
+
+#### Lights per Tile (1024 Lights, Radius = 50, Tile Size: 16 x 16)
+
+![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
 ## Future Work
 
