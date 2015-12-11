@@ -81,6 +81,8 @@ More
 ## Interactive Controls
 
 ## Acknowledgements
+###Forward+: Bringing Deferred Rendering to the Next Level
+https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf
 ###OpenGL Help
 http://learnopengl.com/ by Joey de Vries
 ###Forward+ Reference
