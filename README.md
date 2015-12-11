@@ -56,13 +56,23 @@ For final shader, we passed in the visible light count buffer and diffuse, specu
 ![](screenshots/light debug (500 lights - 50r).png "Lights per Tile (500 Lights, Radius = 50)")
 
 
+
+
+
+
+### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 8 x 8)
+![](screenshots/light debug (1024 lights - 30r - 8 tile).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 8 x 8)")
+
+### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 16 x 16)
+
+![](screenshots/light debug (1024 lights - 30r).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 16 x 16)")
+
+
 ## Performance Analysis
 
 ### Forward+ vs. Forward Rendering Frame Rate
 
 In the a traditional forward renderer, for each fragment we calculate the light contribution from each light in the scene. This is essentially like the culling stage of our Forward+ renderer failing to cull any lights from any of the tiles. We see a massive performance gain when using the Forward+ technique vs. the Forward one. With 1024 lights in the scene (our maximum), a light radius of 10, tile size of 16 pixels squared, and 1080p resolution, we were able to achieve an average framerate of 89.867 frames per second over our 60 second benchmark. Rendering the same scene under the same conditions, Forward rendering only achieved an average of 1.7 frames per second. Below are two videos, one for the Forward renderer and the other for the Forward+, running our benchmark. The Forward+ is able to handle rendering the scene with ease, while the Forward renderer resembles a slide show.
-
-More
 
 #### Forward vs. Forward+ Rendering Frame Rate
 ![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
