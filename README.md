@@ -37,7 +37,11 @@ Forward+ Renderer
 
 
 ## Performance Analysis
+
 ### Forward+ vs. Forward Rendering Frame Rate
+
+In the a traditional forward renderer, for each fragment we calculate the light contribution from each light in the scene. This is essentially like the culling stage of our Forward+ renderer failing to cull any lights from any of the tiles.
+
 ![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
 ## Build Instructions
