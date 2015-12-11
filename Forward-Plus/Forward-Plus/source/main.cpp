@@ -11,7 +11,7 @@ void InitGLFW(int argc, char* argv[]) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-	//glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	gWindow = glfwCreateWindow((int)SCREEN_SIZE.x, (int)SCREEN_SIZE.y, "Forward+ Renderer", NULL, NULL);
 	if (!gWindow) {
@@ -39,7 +39,7 @@ void InitGLFW(int argc, char* argv[]) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE);
-	//glEnable(GL_MULTISAMPLE);
+	glEnable(GL_MULTISAMPLE);
 
 	// Set mouse and keyboard callback functions
 	glfwSetKeyCallback(gWindow, KeyCallback);
@@ -114,7 +114,7 @@ void UpdateLights() {
 		float min = LIGHT_MIN_BOUNDS[1];
 		float max = LIGHT_MAX_BOUNDS[1];
 
-		light.position.y = fmod((light.position.y + LIGHT_DELTA_TIME - min + max), max) + min;
+		light.position.y = fmod((light.position.y + (4.5f * deltaTime) - min + max), max) + min;
 	}
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);

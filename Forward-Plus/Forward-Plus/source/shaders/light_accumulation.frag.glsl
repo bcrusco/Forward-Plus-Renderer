@@ -89,6 +89,8 @@ void main() {
 		color.rgb += irradiance;
 	}
 
+	color.rgb += base_diffuse.rgb * 0.08;
+
 	// Discard any fragments whose alpha are below this threshold
 	if (base_diffuse.a < 0.1) {
 		discard;
