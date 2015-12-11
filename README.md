@@ -15,7 +15,7 @@ Forward+ Renderer
 
 A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf) by Takahiro Harada, Jay McKee, and Jason C. Yang.
 
-![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
+![](screenshots/HDR Cover.png "Crytek Sponza Rendered using Forward+")
 
 ## Video Demo
 
