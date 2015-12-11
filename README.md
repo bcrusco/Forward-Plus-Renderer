@@ -35,11 +35,21 @@ In the depth prepass, we write the depth values of the scene from the camera's p
 
 ![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
-Light culling was done in a compute shader.  The compute shader uses a tile based method in order to cull the lights within each tile.  In our demo, we used tiles that were 16 x 16 pixels.  We implemented the gather approach in order to do our light culling, as was discussed in the paper, "Forward+: Bringing Deferred Shading to the Next Level".  In order to implement this approach, created a work group for each tile.  Within that work group, there were 256 threads that used the compute shader, one thread for each pixel in the tile.   The first step in the compute shader was to compute the frustum of the tile.  This was done by finding the minimum and maximum depth values that occurred within the tile, and then based on the work group ID of the tile, we were able to find the sides of the frustrum.  This calculation was done only for the first thread in the work group, since the frustum remains the same for each thread in the tile.    
+The defining stage of the renderer is the light culling stage. Here, we split the screen into tiles, each 16 x 16 pixels in our implementation, and determine what lights are visible in each tile. We use a compute shader (available in OpenGL 4.3) to calculate which lights are visible. There are two implementations of this technique described in the paper, gather and scatter. We chose the gather approach.
+
+The stage works as follows. A work group is created for each tile. Within that work group, there are 256 threads, one for each pixel in the tile (16 * 16). The depth buffer we created in the depth prepass step is used to determine the minimum and maximum depth values within a tile. Each thread in the workgroup compares there respective minimum and maximum depths at their specific pixel using atomic operations, and the result is the minimum and maximum depths across the entire tile. Once this is done, one thread in the group calculates the frustum planes for that tile, which is then used by all threads in the work group.
+
+We then change the parallelism of the threads to be parallelized around the lights as opposed to the pixels. We can then calculate whether or not a light is inside the frustum up to 256 lights in parallel. If there are additional lights in the scene (our supported maximum is currently 1024), additional passes of 256 parallel checks will occur until all the possible lights have been identified.
+
+The final step is to output our local shared array of visible light indices confirmed to be valid for our tile, and write them to a shader storage buffer object that contains the visible indicies for every tile in the scene. Currently only one thread is responsible for transfering this data to the shader storage buffer object, and we see this as an area for continued improvement.
+
+A debug view of how many lights are in each tile is also provided. In order to view this, add the line `#define LIGHT_DEBUG` to main.h and compile and run the renderer. The more lights there are in a tile, the lighter it will be.  If there are no lights in a tile, it will be black. You can see an example of this view in the image above. This shows a scene with 1024 lights, each with a radius of 50, and a tile size of 16 x 16.
+
+
 
 Once the frustum was calculated, it was time to cull the lights.  The position and radius of each light is passed into the shader through a buffer.  We used this data to calculate the lights distance from the frustum.  If they overlapped, the light was added to the tile's visible light count.  The visible light counts were then passed by a buffer into the final shader.
 
-A debug view of how many lights are in each tile is also provided.  In order to view this, add the line "#define LIGHT_DEBUG" to the top of main.cpp.  The more lights there are in a tile, the lighter it will be.  If there are no lights in a tile, it will be black.  
+ 
 
 ### Light Accumulation and Final Shading
 
@@ -115,6 +125,7 @@ We had a lot of fun working on this project and are really excited with the resu
 * High dynamic range lighting
 * Bloom
 * Visual representations of the point lights in the scene
+* Additional performance analysis and optimization
 
 ## Build Instructions
 
