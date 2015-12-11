@@ -13,6 +13,8 @@ Forward+ Renderer
 
 ## Description
 
+TODO
+
 ![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
 
 ## Video
