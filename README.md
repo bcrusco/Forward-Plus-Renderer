@@ -11,7 +11,7 @@ Forward+ Renderer
 
 ## Description
 
-![](data/Cover.png "Crytek Sponza Rendered using Forward+")
+![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
 
 ## Overview
 
