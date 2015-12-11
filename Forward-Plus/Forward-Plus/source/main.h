@@ -29,12 +29,19 @@ const float LIGHT_RADIUS = 30.0f;
 const float NEAR_PLANE = 0.1f;
 const float FAR_PLANE = 300.0f;
 
+// Defines exposure level for HDR lighting
+const float exposure = 1.0f;
+
 // Constants for light animations
-const glm::vec3 LIGHT_MIN_BOUNDS = glm::vec3(-135.0f, 0.0f, -60.0f);
-const glm::vec3 LIGHT_MAX_BOUNDS = glm::vec3(135.0f, 120.0f, 60.0f);
+const glm::vec3 LIGHT_MIN_BOUNDS = glm::vec3(-135.0f, -20.0f, -60.0f);
+const glm::vec3 LIGHT_MAX_BOUNDS = glm::vec3(135.0f, 145.0f, 60.0f);
 const float LIGHT_DELTA_TIME = -0.6f;
 
 GLFWwindow* gWindow;
+
+// For drawing our 1 x 1 quad
+GLuint quadVAO = 0;
+GLuint quadVBO;
 
 // Mouse and keyboard variables
 bool keys[1024];
@@ -85,5 +92,9 @@ void UpdateLights();
 void Movement();
 static void KeyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods);
 static void MouseCallback(GLFWwindow *window, double x, double y);
+
+// Based on function from LearnOpenGL: http://www.learnopengl.com
+// Draw a 1 x 1 quad in NDC. We use it to render framebuffer color targets and post-processing effects
+void DrawQuad();
 
 int main(int argc, char **argv);

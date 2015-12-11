@@ -8,8 +8,8 @@ void InitGLFW(int argc, char* argv[]) {
 	// Open and configure a window with GLFW
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
 
@@ -114,7 +114,7 @@ void UpdateLights() {
 		float min = LIGHT_MIN_BOUNDS[1];
 		float max = LIGHT_MAX_BOUNDS[1];
 
-		light.position.y = fmod((light.position.y + (4.5f * deltaTime) - min + max), max) + min;
+		light.position.y = fmod((light.position.y + (-4.5f * deltaTime) - min + max), max) + min;
 	}
 
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
@@ -172,6 +172,31 @@ static void MouseCallback(GLFWwindow *window, double x, double y) {
 	camera.ProcessMouseMovement(xOffset, yOffset);
 }
 
+void DrawQuad() {
+	if (quadVAO == 0) {
+		GLfloat quadVertices[] = {
+			-1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+			1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+			1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		};
+
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	}
+
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
+}
+
 int main(int argc, char **argv) {
 	InitGLFW(argc, argv);
 
@@ -189,6 +214,8 @@ int main(int argc, char **argv) {
 #else
 	Shader lightAccumulationShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.frag.glsl", NULL);
+	Shader hdrShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\hdr.vert.glsl",
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\hdr.frag.glsl", NULL);
 #endif
 
 	// So we need to create a depth map FBO
@@ -213,6 +240,32 @@ int main(int argc, char **argv) {
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+#if defined(DEPTH_DEBUG)
+#elif defined(LIGHT_DEBUG)
+#else
+	// Create a floating point HDR frame buffer and a floating point color buffer (as a texture)
+	GLuint hdrFBO;
+	glGenFramebuffers(1, &hdrFBO);
+
+	GLuint colorBuffer;
+	glGenTextures(1, &colorBuffer);
+	glBindTexture(GL_TEXTURE_2D, colorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, SCREEN_SIZE.x, SCREEN_SIZE.y, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// It will also need a depth component as a render buffer, attached to the hdrFBO
+	GLuint rboDepth;
+	glGenRenderbuffers(1, &rboDepth);
+	glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCREEN_SIZE.x, SCREEN_SIZE.y);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
 
 	// Load in our scene models
 	// TODO: Want to replace this path thing with a pay to do this agnostic of what the file path of the project is
@@ -308,12 +361,14 @@ int main(int argc, char **argv) {
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		// Step 3: Accumulate the remaining lights after culling and render (or execute one of the debug views of a flag is enabled
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		// (Or run one of the debug shaders)
+		
 		// Depth debug shader
 #if defined(DEPTH_DEBUG)
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		depthDebugShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(depthDebugShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
@@ -321,6 +376,8 @@ int main(int argc, char **argv) {
 
 		sponzaModel.Draw(depthDebugShader);
 #elif defined(LIGHT_DEBUG)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		lightDebugShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(lightDebugShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(lightDebugShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -331,6 +388,11 @@ int main(int argc, char **argv) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 #else
+		// We render the scene into the floating point HDR frame buffer
+		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		lightAccumulationShader.Use();
 		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(lightAccumulationShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
@@ -343,8 +405,17 @@ int main(int argc, char **argv) {
 		//glBlendFunc(GL_ONE_MINUS_DST_ALPHA, GL_DST_ALPHA);
 
 		sponzaModel.Draw(lightAccumulationShader);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		//glDisable(GL_BLEND);
+
+		// Tonemap the HDR colors to the default framebuffer
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Weirdly, moving this call drops performance into the floor
+		hdrShader.Use();
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, colorBuffer);
+		glUniform1f(glGetUniformLocation(hdrShader.Program, "exposure"), exposure);
+		DrawQuad();
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
