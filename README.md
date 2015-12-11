@@ -65,6 +65,16 @@ The final step is a shader that accumulates all the light contributions from the
 
 We implemented normal maps in an effort to get better visual fidelity from our scene without to much additional computational cost. Crytek's Sponza model that we are using provided normal maps for most of the objects in the scene, and we created additional ones using Photoshop from the provided diffuse texture maps. We implemented the normal maps using tangent space normal mapping as an optimization over the basic implementation. In this method we express all the normals in our normal map in tangent space, where the vectors point roughly along the positive z direction. We then transform all of our lighting vectors to this coordinate space. This allows us to always use the same normal map regardless of the object's orientation. Above you can see an example of the use of normal maps in our scene.
 
+### High Dynamic Range Lighting using Reinhard Tone Mapping
+
+#### Sponza Scene Rendered with HDR
+![](screenshots/HDR Cover.png "Crytek Sponza Rendered using Forward+")
+
+#### Sponza Scene Rendered without HDR
+
+
+Adding high dynamic range lighting (HDR) to our renderer was a relatively simple task with huge benefits in image quality for our scene. Typically brithness and color values are clamped between the range of 0.0 and 1.0 when stored in the framebuffer. Our scene features many lights that are consantly overlapping, and we are freqently accumulating color values over 1.0 in our accumulation shading step. Since the framebuffer caps these values at 1.0, we lose all the intensity of those lights. For HDR we render our scene into a floating point framebuffer, which doesn't clamp our color range. Then, in a new HDR shader program, we perform Reinhard tone mapping, which converts the unbounded color variables back to a range of 0.0 - 1.0 which the computer display requires, but in a way that retains the detail we captured in the floating point framebuffer.
+
 ## Performance Analysis
 
 ### Forward+ vs. Forward Rendering Frame Rate
@@ -118,7 +128,6 @@ We had a lot of fun working on this project and are really excited with the resu
 * Cascading shadow maps
 * Skybox and environment mapping
 * Improved normal mapping techniques
-* High dynamic range lighting
 * Bloom
 * Visual representations of the point lights in the scene
 * Additional performance analysis and optimization
