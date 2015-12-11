@@ -44,10 +44,13 @@ In the a traditional forward renderer, for each fragment we calculate the light 
 
 More
 
+### Forward vs. Forward+ Rendering Frame Rate
 ![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
+### Forward Rendering Benchmark (1024 Lights)
 <a href="https://youtu.be/Y_6BXVHb7os" target="_blank"><img src="thumbs/Forward Rendering Comparison.png" alt="Forward Rendering Comparison" width="853" height="480" border="0"/></a>
 
+### Forward+ Rendering Benchmark (1024 Lights)
 <a href="https://youtu.be/dg2xr3AlW40" target="_blank"><img src="thumbs/Forward+ Rendering Comparison.PNG" alt="Forward+ Rendering Comparison" width="853" height="480" border="0"/></a>
 
 ## Future Work
