@@ -13,11 +13,11 @@ Forward+ Renderer
 
 ## Description
 
-TODO
+A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf) by Takahiro Harada, Jay McKee, and Jason C. Yang.
 
 ![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
 
-## Video
+## Video Demo
 
 <a href="https://youtu.be/SjVMZQViejM" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
 
@@ -132,7 +132,7 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
 
 ## Acknowledgements
 * [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf)
- * Takahiro Harada, Jay McKee, and Jason C.Yang
+ * Takahiro Harada, Jay McKee, and Jason C. Yang
  * [EUROGRAPHICS 2012 Slide Deck](http://www.slideshare.net/takahiroharada/forward-34779335)
 * [DirectX 11 Rendering in Battlefield 3](http://www.dice.se/news/directx-11-rendering-battlefield-3/)
  * Johan Andersson
