@@ -121,7 +121,12 @@ Coming soon.
 
 ## Interactive Controls
 
-Coming soon.
+Controlling the camera and moving about the scene will be intuitive to anyone whose played a first-person shooter game.
+* W: Move forward.
+* A: Move left.
+* S: Move backward.
+* D: More right.
+* Mouse movement: Orients the camera.
 
 ## Acknowledgements
 ###Forward+: Bringing Deferred Rendering to the Next Level
