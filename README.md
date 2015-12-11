@@ -7,11 +7,13 @@ Forward+ Renderer
 * **Megan Moore** (Personal Site: http://momeg0.wix.com/meganemoore, LinkedIn: https://linkedin.com/in/megan-moore-386076a6)
 * Tested on: Windows 10, i7-3770K @ 3.50GHz 16GB, GTX 980 4096MB (Personal Computer)
 
-
-
 ## Description
 
 ![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
+
+## Video
+
+Waiting for YouTube to process...
 
 ## Overview
 
@@ -36,9 +38,10 @@ For final shader, we passed in the visible light count buffer and diffuse, specu
 
 ## Features
 
-
 ### Normal Maps
-![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
+
+Description coming soon!
+![](screenshots/Forward-Plus 2015-12-10 22-27-29-02.png "Normal Maps")
 
 
 ## Performance Analysis
@@ -90,10 +93,15 @@ If you look closely at both sets of images you can see the differences between t
 
 ## Future Work
 
+Coming soon.
 
 ## Build Instructions
 
+Coming soon.
+
 ## Interactive Controls
+
+Coming soon.
 
 ## Acknowledgements
 ###Forward+: Bringing Deferred Rendering to the Next Level
