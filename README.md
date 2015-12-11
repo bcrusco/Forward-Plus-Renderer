@@ -45,17 +45,11 @@ The final step is to output our local shared array of visible light indices conf
 
 A debug view of how many lights are in each tile is also provided. In order to view this, add the line `#define LIGHT_DEBUG` to main.h and compile and run the renderer. The more lights there are in a tile, the lighter it will be.  If there are no lights in a tile, it will be black. You can see an example of this view in the image above. This shows a scene with 1024 lights, each with a radius of 50, and a tile size of 16 x 16.
 
-
-
-Once the frustum was calculated, it was time to cull the lights.  The position and radius of each light is passed into the shader through a buffer.  We used this data to calculate the lights distance from the frustum.  If they overlapped, the light was added to the tile's visible light count.  The visible light counts were then passed by a buffer into the final shader.
-
- 
+A more indepth analysis on performance related to light culling and tile size can be found below.
 
 ### Light Accumulation and Final Shading
 
-
-
-For final shader, we passed in the visible light count buffer and diffuse, specular, and normal textures.  We applied blinn-phong lighting to the model.  For each tile, the visibile lights were looped through in order to get the affects of each one in every pixel. This allowed us to create a realistic final fragment color for our rendered image.  
+The final step is a shader that accumulates all the light contributions from the lists of visible lights we calculated per tile, and then does the final shading calculations. For each fragment, we determine which tile it belongs to, and loop through the indicies storated at that tile's location in the shader storage buffer object of visible light indices. We are currently using the Blinn-Phong lighting model, but plan to make some changes here and implement different material properties to improve our render quality. We load diffuse and specular maps to define the colors of the diffuse and specular components, and use normal maps (more on that below).
 
 ## Features
 
