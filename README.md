@@ -81,3 +81,11 @@ More
 ## Interactive Controls
 
 ## Acknowledgements
+###OpenGL Help
+http://learnopengl.com/ by Joey de Vries
+###Forward+ Reference
+http://www.slideshare.net/takahiroharada/forward-34779335 by Takahiro Harada
+###Deferred Shader (helpful with lighting)
+http://www.dice.se/news/spu-based-deferred-shading-battlefield-3-playstation-3/ by DICE
+###Sponza Model
+http://www.crytek.com/cryengine/cryengine3/downloads from Crytek, by Frank Mienl
