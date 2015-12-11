@@ -13,7 +13,7 @@ Forward+ Renderer
 
 ## Video
 
-Waiting for YouTube to process...
+<a href="https://youtu.be/SjVMZQViejM" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
 
 ## Overview
 
