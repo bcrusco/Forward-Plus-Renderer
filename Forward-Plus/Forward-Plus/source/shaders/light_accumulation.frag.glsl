@@ -37,11 +37,10 @@ out vec4 fragColor;
 
 // Attenuate the point light intensity
 float attenuate(vec3 lightDirection, float radius) {
+	float cutoff = 0.5;
 	float attenuation = dot(lightDirection, lightDirection) / (100.0 * radius);
 	attenuation = 1.0 / (attenuation * 15.0 + 1.0);
-	float cutoff = 0.5;
 	attenuation = (attenuation - cutoff) / (1.0 - cutoff);
-	//atten = (atten - 0.0625) * 1.066666;
 
 	return clamp(attenuation, 0.0, 1.0);
 }
