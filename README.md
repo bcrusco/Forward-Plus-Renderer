@@ -137,12 +137,11 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
 * [DirectX 11 Rendering in Battlefield 3](http://www.dice.se/news/directx-11-rendering-battlefield-3/)
  * Johan Andersson
  * Helpful in resolving some of the light culling implementation details.
- 
-###OpenGL Help
-http://learnopengl.com/ by Joey de Vries
-###Forward+ Reference
-http://www.slideshare.net/takahiroharada/forward-34779335 by Takahiro Harada
-###Deferred Shader (helpful with lighting)
-http://www.dice.se/news/spu-based-deferred-shading-battlefield-3-playstation-3/ by DICE
-###Sponza Model
-http://www.crytek.com/cryengine/cryengine3/downloads from Crytek, by Frank Mienl
+* [Learn OpenGL](http://www.learnopengl.com/)
+ * Joey de Vries
+ * Helped with clarification on OpenGL implementation details and basis for our model loader.
+ * Thanks to [Debanshu Singh](https://www.linkedin.com/in/debanshu) for introducing this to us.
+* [Crytek's Sponza Model](http://www.crytek.com/cryengine/cryengine3/downloads)
+ * Frank Meinl
+ * Have made changes to remove certain parts of the scene, create additional normal and specular maps, etc.
+
