@@ -44,9 +44,13 @@ For final shader, we passed in the visible light count buffer and diffuse, specu
 
 ### Tangent Space Normal Mapping
 
+#### Lion Sculpture Featuring Normal Maps
 ![](screenshots/Forward-Plus 2015-12-10 22-27-29-02.png "Normal Maps")
 
-We implemented normal maps in an effort to get better visual fidelity from our scene without to much additional computational cost. Crytek's Sponza model that we are using provided normal maps for most of the objects in the scene, and we created additional ones using Photoshop from the provided diffuse texture maps. We implemented the normal maps using tangent space normal mapping as an optimization over the basic implementation. In this method we express all the normals in our normal map in tangent space, where the vectors point roughly along the positive z direction. We then transform all of our lighting vectors to this coordinate space. This allows us to always use the same normal map regardless of the object's orientation.
+#### Visualization of Lion Sculpture's Normals
+![](screenshots/Normals Debug.png "Normal Maps")
+
+We implemented normal maps in an effort to get better visual fidelity from our scene without to much additional computational cost. Crytek's Sponza model that we are using provided normal maps for most of the objects in the scene, and we created additional ones using Photoshop from the provided diffuse texture maps. We implemented the normal maps using tangent space normal mapping as an optimization over the basic implementation. In this method we express all the normals in our normal map in tangent space, where the vectors point roughly along the positive z direction. We then transform all of our lighting vectors to this coordinate space. This allows us to always use the same normal map regardless of the object's orientation. Above you can see an example of the use of normal maps in our scene.
 
 ## Performance Analysis
 
