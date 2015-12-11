@@ -49,6 +49,8 @@ A more indepth analysis on performance related to light culling and tile size ca
 
 ### Light Accumulation and Final Shading
 
+![](screenshots/Final Shading.png "Light Accumulation and Final Shading")
+
 The final step is a shader that accumulates all the light contributions from the lists of visible lights we calculated per tile, and then does the final shading calculations. For each fragment, we determine which tile it belongs to, and loop through the indicies storated at that tile's location in the shader storage buffer object of visible light indices. We are currently using the Blinn-Phong lighting model, but plan to make some changes here and implement different material properties to improve our render quality. We load diffuse and specular maps to define the colors of the diffuse and specular components, and use normal maps (more on that below).
 
 ## Features
