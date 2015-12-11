@@ -13,34 +13,43 @@ Forward+ Renderer
 
 ## Description
 
-TODO
+A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf) by Takahiro Harada, Jay McKee, and Jason C. Yang.
 
 ![](screenshots/Cover.png "Crytek Sponza Rendered using Forward+")
 
-## Video
+## Video Demo
 
 <a href="https://youtu.be/SjVMZQViejM" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
 
 ## Overview
 
-As we learned from the paper, "Forward+: Bringing Deferred Lighting to the Next Level", the three main stages of a Forward+ renderer are the depth prepass, light culling, and the final shading.  These are the three main stages we used in our Farward+ Renderer.  
+There are three main steps in our renderer: depth prepass, light culling, and the light accumulation and final shading.
 
 ### Depth Prepass
 
-Starting with the depth prepass, we have a vertex shader that collects the z value of each vertex in the scene.  The fragment shader does not need to do any calculations, as we are not drawing anything to the screen at this time.  We also included a debug view of the depth.  In this view, objects that are closer to the camera are darker, while objects farther away will appear white.  This view can be seen by adding the line "#define DEPTH_DEBUG" at the top of the main.cpp file.  
+![](screenshots/depth buffer.png "Depth Buffer")
+
+In the depth prepass, we write the depth values of the scene from the camera's perspective into a depth buffer. The above image shows this buffer. Objects that are closer to the camera will appear darker, while objects far away will appear increasingly white. The above debug view can be generating by compiling and running the renderer while including `#define DEPTH_DEBUG` in main.h. Note: Because we are creating the depth buffer using the camera's projection, we must linearize the depth values to get the proper results. Without doing thing, the depth values will be heavily weighted to the nearest portion of the projection.
 
 ### Light Culling
 
-Light culling was done in a compute shader.  The compute shader uses a tile based method in order to cull the lights within each tile.  In our demo, we used tiles that were 16 x 16 pixels.  We implemented the gather approach in order to do our light culling, as was discussed in the paper, "Forward+: Bringing Deferred Shading to the Next Level".  In order to implement this approach, created a work group for each tile.  Within that work group, there were 256 threads that used the compute shader, one thread for each pixel in the tile.   The first step in the compute shader was to compute the frustum of the tile.  This was done by finding the minimum and maximum depth values that occurred within the tile, and then based on the work group ID of the tile, we were able to find the sides of the frustrum.  This calculation was done only for the first thread in the work group, since the frustum remains the same for each thread in the tile.    
+![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
-Once the frustum was calculated, it was time to cull the lights.  The position and radius of each light is passed into the shader through a buffer.  We used this data to calculate the lights distance from the frustum.  If they overlapped, the light was added to the tile's visible light count.  The visible light counts were then passed by a buffer into the final shader.
+The defining stage of the renderer is the light culling stage. Here, we split the screen into tiles, each 16 x 16 pixels in our implementation, and determine what lights are visible in each tile. We use a compute shader (available in OpenGL 4.3) to calculate which lights are visible. There are two implementations of this technique described in the paper, gather and scatter. We chose the gather approach.
 
-A debug view of how many lights are in each tile is also provided.  In order to view this, add the line "#define LIGHT_DEBUG" to the top of main.cpp.  The more lights there are in a tile, the lighter it will be.  If there are no lights in a tile, it will be black.  
+The stage works as follows. A work group is created for each tile. Within that work group, there are 256 threads, one for each pixel in the tile (16 * 16). The depth buffer we created in the depth prepass step is used to determine the minimum and maximum depth values within a tile. Each thread in the workgroup compares there respective minimum and maximum depths at their specific pixel using atomic operations, and the result is the minimum and maximum depths across the entire tile. Once this is done, one thread in the group calculates the frustum planes for that tile, which is then used by all threads in the work group.
 
-### Final Shading
+We then change the parallelism of the threads to be parallelized around the lights as opposed to the pixels. We can then calculate whether or not a light is inside the frustum up to 256 lights in parallel. If there are additional lights in the scene (our supported maximum is currently 1024), additional passes of 256 parallel checks will occur until all the possible lights have been identified.
 
-For final shader, we passed in the visible light count buffer and diffuse, specular, and normal textures.  We applied blinn-phong lighting to the model.  For each tile, the visibile lights were looped through in order to get the affects of each one in every pixel. This allowed us to create a realistic final fragment color for our rendered image.  
+The final step is to output our local shared array of visible light indices confirmed to be valid for our tile, and write them to a shader storage buffer object that contains the visible indicies for every tile in the scene. Currently only one thread is responsible for transfering this data to the shader storage buffer object, and we see this as an area for continued improvement.
 
+A debug view of how many lights are in each tile is also provided. In order to view this, add the line `#define LIGHT_DEBUG` to main.h and compile and run the renderer. The more lights there are in a tile, the lighter it will be.  If there are no lights in a tile, it will be black. You can see an example of this view in the image above. This shows a scene with 1024 lights, each with a radius of 50, and a tile size of 16 x 16.
+
+A more indepth analysis on performance related to light culling and tile size can be found below.
+
+### Light Accumulation and Final Shading
+
+The final step is a shader that accumulates all the light contributions from the lists of visible lights we calculated per tile, and then does the final shading calculations. For each fragment, we determine which tile it belongs to, and loop through the indicies storated at that tile's location in the shader storage buffer object of visible light indices. We are currently using the Blinn-Phong lighting model, but plan to make some changes here and implement different material properties to improve our render quality. We load diffuse and specular maps to define the colors of the diffuse and specular components, and use normal maps (more on that below).
 
 ## Features
 
@@ -95,12 +104,6 @@ If you look closely at both sets of images you can see the differences between t
 
 ![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
-## Additional Debug Images
-
-### Depth Buffer
-
-![](screenshots/depth buffer.png "Depth Buffer")
-
 ## Future Work
 
 We had a lot of fun working on this project and are really excited with the results we achieved. Because of the time constraints of the project we were forced to focus all of our attention on the main implementation of the Forward+ technique. We think there's a lot more that could be done to improve the quality and performance of the renderer, and we have lots of plans for future development.
@@ -116,6 +119,7 @@ We had a lot of fun working on this project and are really excited with the resu
 * High dynamic range lighting
 * Bloom
 * Visual representations of the point lights in the scene
+* Additional performance analysis and optimization
 
 ## Build Instructions
 
@@ -131,13 +135,25 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
 * Mouse movement: Orients the camera.
 
 ## Acknowledgements
-###Forward+: Bringing Deferred Rendering to the Next Level
-https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf
-###OpenGL Help
-http://learnopengl.com/ by Joey de Vries
-###Forward+ Reference
-http://www.slideshare.net/takahiroharada/forward-34779335 by Takahiro Harada
-###Deferred Shader (helpful with lighting)
-http://www.dice.se/news/spu-based-deferred-shading-battlefield-3-playstation-3/ by DICE
-###Sponza Model
-http://www.crytek.com/cryengine/cryengine3/downloads from Crytek, by Frank Mienl
+* [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf)
+ * Takahiro Harada, Jay McKee, and Jason C. Yang
+ * [EUROGRAPHICS 2012 Slide Deck](http://www.slideshare.net/takahiroharada/forward-34779335)
+* [DirectX 11 Rendering in Battlefield 3](http://www.dice.se/news/directx-11-rendering-battlefield-3/)
+ * Johan Andersson
+ * Helpful in resolving some of the light culling implementation details.
+* [Learn OpenGL](http://www.learnopengl.com/)
+ * Joey de Vries
+ * Helped with clarification on OpenGL implementation details and basis for our model loader.
+ * Thanks to [Debanshu Singh](https://www.linkedin.com/in/debanshu) for introducing this to us.
+* [Crytek's Sponza Model](http://www.crytek.com/cryengine/cryengine3/downloads)
+ * Frank Meinl
+ * Have made changes to remove certain parts of the scene, create additional normal and specular maps, etc.
+
+## Libraries
+* [Assimp: Open Asset Import Library](http://www.assimp.org/)
+ * Used to load our assets into the renderer.
+* [DevIL: Developer's Image Library](http://openil.sourceforge.net/)
+ * Used for loading images for textures.
+* [GLM: OpenGL Mathematics](http://glm.g-truc.net/0.9.7/index.html)
+* [GLFW](http://www.glfw.org/)
+* [GLEW: The OpenGL Extension Wrangler Library](https://github.com/nigels-com/glew)
