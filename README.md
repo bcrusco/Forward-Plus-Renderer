@@ -46,9 +46,9 @@ More
 
 ![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
-<a href="https://youtu.be/Y_6BXVHb7os" target="_blank"><img src="img/Forward Rendering Comparison.PNG" alt="Forward Rendering Comparisonr" width="1280" height="720" border="0"/></a>
+<a href="https://youtu.be/Y_6BXVHb7os" target="_blank"><img src="thumbs/Forward Rendering Comparison.PNG" alt="Forward Rendering Comparisonr" width="1280" height="720" border="0"/></a>
 
-<a href="https://youtu.be/dg2xr3AlW40" target="_blank"><img src="img/Forward+ Rendering Comparison.PNG" alt="Forward+ Rendering Comparisonr" width="1280" height="720" border="0"/></a>
+<a href="https://youtu.be/dg2xr3AlW40" target="_blank"><img src="thumbs/Forward+ Rendering Comparison.PNG" alt="Forward+ Rendering Comparisonr" width="1280" height="720" border="0"/></a>
 
 ## Future Work
 
