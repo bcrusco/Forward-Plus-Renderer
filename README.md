@@ -150,3 +150,6 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
  * Used to load our assets into the renderer.
 * [DevIL: Developer's Image Library](http://openil.sourceforge.net/)
  * Used for loading images for textures.
+* [GLM: OpenGL Mathematics](http://glm.g-truc.net/0.9.7/index.html)
+* [GLFW](http://www.glfw.org/)
+* [GLEW: The OpenGL Extension Wrangler Library](https://github.com/nigels-com/glew)
