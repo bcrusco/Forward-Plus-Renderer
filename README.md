@@ -145,3 +145,8 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
  * Frank Meinl
  * Have made changes to remove certain parts of the scene, create additional normal and specular maps, etc.
 
+## Libraries
+* [Assimp: Open Asset Import Library](http://www.assimp.org/)
+ * Used to load our assets into the renderer.
+* [DevIL: Developer's Image Library](http://openil.sourceforge.net/)
+ * Used for loading images for textures.
