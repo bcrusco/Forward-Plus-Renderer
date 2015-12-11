@@ -131,8 +131,13 @@ Controlling the camera and moving about the scene will be intuitive to anyone wh
 * Mouse movement: Orients the camera.
 
 ## Acknowledgements
-###Forward+: Bringing Deferred Rendering to the Next Level
-https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf
+* [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf)
+ * Takahiro Harada, Jay McKee, and Jason C.Yang
+ * [EUROGRAPHICS 2012 Slide Deck](http://www.slideshare.net/takahiroharada/forward-34779335)
+* [DirectX 11 Rendering in Battlefield 3](http://www.dice.se/news/directx-11-rendering-battlefield-3/)
+ * Johan Andersson
+ * Helpful in resolving some of the light culling implementation details.
+ 
 ###OpenGL Help
 http://learnopengl.com/ by Joey de Vries
 ###Forward+ Reference
