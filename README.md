@@ -64,14 +64,20 @@ In the a traditional forward renderer, for each fragment we calculate the light 
 
 More
 
-### Forward vs. Forward+ Rendering Frame Rate
+#### Forward vs. Forward+ Rendering Frame Rate
 ![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
-### Forward Rendering Benchmark (1024 Lights)
+#### Forward Rendering Benchmark (1024 Lights)
 <a href="https://youtu.be/Y_6BXVHb7os" target="_blank"><img src="thumbs/Forward Rendering Comparison.png" alt="Forward Rendering Comparison" width="853" height="480" border="0"/></a>
 
-### Forward+ Rendering Benchmark (1024 Lights)
+#### Forward+ Rendering Benchmark (1024 Lights)
 <a href="https://youtu.be/dg2xr3AlW40" target="_blank"><img src="thumbs/Forward+ Rendering Comparison.PNG" alt="Forward+ Rendering Comparison" width="853" height="480" border="0"/></a>
+
+### Tile Size
+
+We experimented with multipe different tile sizes before we landed on 16 x 16 pixel tiles. The most promising canidate was 8 x 8 tiles, and this was also the first size we tried, as it is the size used in the Forward+: Bringing Deferred Lighting to the Next Level paper. With 8 x 8, we achieved an average frame rate of 25.7 frames per second. Once we switched to 16 x 16 pixel tiles, our average jumped to 89.86. You can see those results in the chart below.
+
+
 
 ## Future Work
 
