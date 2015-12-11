@@ -11,7 +11,7 @@ Forward+ Renderer
 
 ## Description
 
-![](screenshots/Preview.png "Preview Sponza")
+![](data/Cover.png "Crytek Sponza Rendered using Forward+")
 
 ## Overview
 
@@ -31,14 +31,14 @@ A debug view of how many lights are in each tile is also provided.  In order to 
 
 ### Final Shading
 
-For final shader, we passed in the visible light count buffer and diffuse, specular, and normal textures.  We applied blinn-phong lighting to the model.  For each tile, the visibile lights were looped through in order to get the affects of each one in every pixel.  This allowed us to create a realistic final fragment color for our rendered image.  
+For final shader, we passed in the visible light count buffer and diffuse, specular, and normal textures.  We applied blinn-phong lighting to the model.  For each tile, the visibile lights were looped through in order to get the affects of each one in every pixel. This allowed us to create a realistic final fragment color for our rendered image.  
 
 
 ## Features
 
 
 ### Normal Maps
-
+![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
 
 ## Performance Analysis
