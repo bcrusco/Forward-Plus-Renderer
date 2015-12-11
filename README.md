@@ -19,7 +19,7 @@ A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing D
 
 ## Video Demo
 
-<a href="https://youtu.be/SjVMZQViejM" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
+<a href="https://youtu.be/YntvTnLO44c" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
 
 ## Overview
 
