@@ -37,6 +37,8 @@ Forward+ Renderer
 
 
 ## Performance Analysis
+### Forward+ vs. Forward Rendering Frame Rate
+![](screenshots/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
 
 ## Build Instructions
 
