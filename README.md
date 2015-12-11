@@ -93,7 +93,18 @@ If you look closely at both sets of images you can see the differences between t
 
 ## Future Work
 
-Coming soon.
+We had a lot of fun working on this project and are really excited with the results we achieved. Because of the time constraints of the project we were forced to focus all of our attention on the main implementation of the Forward+ technique. We think there's a lot more that could be done to improve the quality and performance of the renderer, and we have lots of plans for future development.
+
+* Directional lights
+* Material properties
+* Stenciled shadow volumes for point lights
+* SSAO
+* Gamma correction
+* Cascading shadow maps
+* Skybox and environment mapping
+* Improved normal mapping techniques
+* High dynamic range lighting
+* Bloom
 
 ## Build Instructions
 
