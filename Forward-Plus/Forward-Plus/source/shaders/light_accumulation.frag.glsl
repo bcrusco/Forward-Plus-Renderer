@@ -84,6 +84,12 @@ void main() {
 		float diffuse = max(dot(lightDirection, normal), 0);
 		// How do I change the material propery for the spec exponent? is it the alpha of the spec texture?
 		float specular = pow(max(dot(halfway, normal), 0), 1.0);
+
+		// For Debugging. Confirmed that when spec is zero, seeing issue with point light near surface (or possibly phased through surface)
+		/*if (specular == 0.0) {
+			specular = 1.0;
+		}*/
+
 		vec3 irradiance = lightColor.rgb * ((base_diffuse.rgb * diffuse) + (base_specular.rgb * vec3(specular))) * attenuation;
 		color.rgb += irradiance;
 	}
