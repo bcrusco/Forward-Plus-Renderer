@@ -34,7 +34,7 @@ const float exposure = 1.0f;
 
 // Constants for light animations
 const glm::vec3 LIGHT_MIN_BOUNDS = glm::vec3(-135.0f, -20.0f, -60.0f);
-const glm::vec3 LIGHT_MAX_BOUNDS = glm::vec3(135.0f, 145.0f, 60.0f);
+const glm::vec3 LIGHT_MAX_BOUNDS = glm::vec3(135.0f, 170.0f, 60.0f);
 const float LIGHT_DELTA_TIME = -0.6f;
 
 GLFWwindow* gWindow;
