@@ -97,7 +97,7 @@ void main() {
 	color.rgb += base_diffuse.rgb * 0.08;
 
 	// Use the mask to discard any fragments that are transparent
-	if (base_diffuse.a == 0.0) {
+	if (base_diffuse.a <= 0.2) {
 		discard;
 	}
 	
