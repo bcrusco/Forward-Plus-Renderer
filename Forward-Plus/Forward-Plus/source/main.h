@@ -7,6 +7,8 @@
 #include <GL\glew.h>
 #include <GLFW\glfw3.h>
 
+#include <IL/il.h>
+
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -73,6 +75,51 @@ GLuint workGroupsY = 0;
 // Camera object
 Camera camera(glm::vec3(-40.0f, 10.0f, 0.0f));
 
+// Vertices for our skybox cubemap
+GLfloat skyboxVertices[] = {   
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f,
+	1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	1.0f, -1.0f, -1.0f,
+	1.0f, -1.0f,  1.0f,
+	1.0f,  1.0f,  1.0f,
+	1.0f,  1.0f,  1.0f,
+	1.0f,  1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	1.0f,  1.0f,  1.0f,
+	1.0f,  1.0f,  1.0f,
+	1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	1.0f,  1.0f, -1.0f,
+	1.0f,  1.0f,  1.0f,
+	1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	1.0f, -1.0f, -1.0f,
+	1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	1.0f, -1.0f,  1.0f
+};
+
 // Creates window and initializes GLFW
 void InitGLFW(int argc, char* argv[]);
 
@@ -96,5 +143,7 @@ static void MouseCallback(GLFWwindow *window, double x, double y);
 // Based on function from LearnOpenGL: http://www.learnopengl.com
 // Draw a 1 x 1 quad in NDC. We use it to render framebuffer color targets and post-processing effects
 void DrawQuad();
+
+GLuint LoadCubemap(vector<const GLchar*> faces);
 
 int main(int argc, char **argv);

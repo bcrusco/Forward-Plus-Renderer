@@ -197,6 +197,43 @@ void DrawQuad() {
 	glBindVertexArray(0);
 }
 
+GLuint LoadCubemap(vector<const GLchar*> faces) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+	ilInit();
+	ILuint imageID;
+	ilGenImages(1, &imageID);
+
+	int width, height;
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	for (GLuint i = 0; i < faces.size(); i++) {
+		// TODO: replace with devil 
+
+		ilBindImage(imageID);
+		ilEnable(IL_ORIGIN_SET);
+		ilOriginFunc(IL_ORIGIN_UPPER_LEFT);
+
+		ilLoadImage((ILstring)faces[i]);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, ilGetData());
+		ilDeleteImages(1, &imageID);
+
+		//image = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
+		//glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		//SOIL_free_image_data(image);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return textureID;
+}
+
 int main(int argc, char **argv) {
 	InitGLFW(argc, argv);
 
@@ -214,6 +251,8 @@ int main(int argc, char **argv) {
 #else
 	Shader lightAccumulationShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\light_accumulation.frag.glsl", NULL);
+	Shader skyboxShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\skybox.vert.glsl", 
+		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\skybox.frag.glsl", NULL);
 	Shader hdrShader("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\hdr.vert.glsl",
 		"D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\source\\shaders\\hdr.frag.glsl", NULL);
 #endif
@@ -244,6 +283,29 @@ int main(int argc, char **argv) {
 #if defined(DEPTH_DEBUG)
 #elif defined(LIGHT_DEBUG)
 #else
+
+	// Setup skybox VAO
+	GLuint skyboxVAO, skyboxVBO;
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glBindVertexArray(0);
+
+	// Set up and load the cubemap / skybox
+	vector<const GLchar*> faces;
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_rt.jpg");
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_lf.jpg");
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_up.jpg");
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_dn.jpg");
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_bk.jpg");
+	faces.push_back("D:\\Git\\Forward-Plus-Renderer\\Forward-Plus\\Forward-Plus\\skybox\\starfield_ft.jpg");
+	GLuint cubemapTexture = LoadCubemap(faces);
+
+
 	// Create a floating point HDR frame buffer and a floating point color buffer (as a texture)
 	GLuint hdrFBO;
 	glGenFramebuffers(1, &hdrFBO);
@@ -408,6 +470,25 @@ int main(int argc, char **argv) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		//glDisable(GL_BLEND);
+
+
+		// Draw skybox after scene (should it be before or after HDR?)
+		glDepthFunc(GL_LEQUAL);  // Change depth function so depth test passes when values are equal to depth buffer's content
+		skyboxShader.Use();
+		view = glm::mat4(glm::mat3(camera.GetViewMatrix()));	// Remove any translation component of the view matrix
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		// skybox cube
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+
+		//glUniform1i(glGetUniformLocation(shader.Program, "skybox"), 0);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthFunc(GL_LESS); // Set depth function back to default
+
 
 		// Tonemap the HDR colors to the default framebuffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Weirdly, moving this call drops performance into the floor
