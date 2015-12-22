@@ -67,6 +67,7 @@ newmtl Material__298
 	Ke 0.0000 0.0000 0.0000
 	map_Ka textures\background.tga
 	map_Kd textures\background.tga
+	map_Ks textures\background_spec.tga
 	map_bump textures\background_ddn.tga
 	bump textures\background_ddn.tga
 
@@ -417,6 +418,7 @@ newmtl Material__25
 	Ke 0.0000 0.0000 0.0000
 	map_Ka textures\lion.tga
 	map_Kd textures\lion.tga
+	map_Ks textures\lion_spec.tga
 	map_bump textures\lion_ddn.tga
 	bump textures\lion_ddn.tga
 
