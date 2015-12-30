@@ -19,7 +19,7 @@ A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing D
 
 ## Video Demo
 
-<a href="https://youtu.be/YntvTnLO44c" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
+<a href="https://youtu.be/HIrq4sF5QO8" target="_blank"><img src="thumbs/Forward+ Demo.png" alt="Forward+ Renderer Demo" width="853" height="480" border="0"/></a>
 
 ## Overview
 
@@ -29,7 +29,7 @@ There are three main steps in our renderer: depth prepass, light culling, and th
 
 ![](screenshots/depth buffer.png "Depth Buffer")
 
-In the depth prepass, we write the depth values of the scene from the camera's perspective into a depth buffer. The above image shows this buffer. Objects that are closer to the camera will appear darker, while objects far away will appear increasingly white. The above debug view can be generating by compiling and running the renderer while including `#define DEPTH_DEBUG` in main.h. Note: Because we are creating the depth buffer using the camera's projection, we must linearize the depth values to get the proper results. Without doing thing, the depth values will be heavily weighted to the nearest portion of the projection.
+In the depth prepass, we write the depth values of the scene from the camera's perspective into a depth buffer. The above image shows this buffer. Objects that are closer to the camera will appear darker, while objects far away will appear increasingly white. The above debug view can be generating by compiling and running the renderer while including `#define DEPTH_DEBUG` in main.h. Note: Because we are creating the depth buffer using the camera's projection, we must linearize the depth values to get the proper results. Without doing this, the depth values will be heavily weighted to the nearest portion of the projection.
 
 ### Light Culling
 
