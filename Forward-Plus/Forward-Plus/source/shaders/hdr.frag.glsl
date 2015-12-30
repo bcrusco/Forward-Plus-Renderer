@@ -21,5 +21,5 @@ void main() {
 	// Minor gamma correction. Need to expand on it
 	const float gamma = 2.2;
 	result = pow(result, vec3(1.0 / gamma));
-	fragColor = vec4(result, 1.0f);
+	fragColor = vec4(result, 1.0);
 }

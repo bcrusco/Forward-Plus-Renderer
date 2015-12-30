@@ -408,7 +408,7 @@ int main(int argc, char **argv) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		//glDisable(GL_BLEND);
-
+		
 		// Tonemap the HDR colors to the default framebuffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Weirdly, moving this call drops performance into the floor
 		hdrShader.Use();
@@ -416,7 +416,7 @@ int main(int argc, char **argv) {
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
 		glUniform1f(glGetUniformLocation(hdrShader.Program, "exposure"), exposure);
 		DrawQuad();
-
+		
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 #endif
