@@ -4,11 +4,11 @@ Forward+ Renderer
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Final Project**
 
 * Bradley Crusco
- * [Personal Site](http://www.bradleycrusco.com)
- * [LinkedIn](https://linkedin.com/in/bcrusco)
+  * [Personal Site](http://www.bradleycrusco.com)
+  * [LinkedIn](https://linkedin.com/in/bcrusco)
 * Megan Moore
- * [Personal Site](http://momeg0.wix.com/meganemoore)
- * [LinkedIn](https://linkedin.com/in/megan-moore-386076a6)
+  * [Personal Site](http://momeg0.wix.com/meganemoore)
+  * [LinkedIn](https://linkedin.com/in/megan-moore-386076a6)
 * Tested on: Windows 10, i7-3770K @ 3.50GHz 16GB, GTX 980 4096MB (Personal Computer)
 
 ## Description
@@ -115,26 +115,6 @@ If you look closely at both sets of images you can see the differences between t
 #### Lights per Tile (1024 Lights, Radius = 50, Tile Size: 16 x 16)
 
 ![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2050r).png?raw=true "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
-
-## Future Work
-
-We had a lot of fun working on this project and are really excited with the results we achieved. Because of the time constraints of the project we were forced to focus all of our attention on the main implementation of the Forward+ technique. We think there's a lot more that could be done to improve the quality and performance of the renderer, and we have lots of plans for future development.
-
-* Directional lights
-* Material properties
-* Stenciled shadow volumes for point lights
-* SSAO
-* Gamma correction
-* Cascading shadow maps
-* Skybox and environment mapping
-* Improved normal mapping techniques
-* Bloom
-* Visual representations of the point lights in the scene
-* Additional performance analysis and optimization
-
-## Build Instructions
-
-Coming soon.
 
 ## Interactive Controls
 
