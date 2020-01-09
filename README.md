@@ -15,7 +15,7 @@ Forward+ Renderer
 
 A real-time GPU-based Forward+ renderer based on the paper [Forward+: Bringing Deferred Rendering to the Next Level](https://takahiroharada.files.wordpress.com/2015/04/forward_plus.pdf) by Takahiro Harada, Jay McKee, and Jason C. Yang.
 
-![](screenshots/HDR Cover.png "Crytek Sponza Rendered using Forward+")
+![Crytek Sponza Rendered using Forward+](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/HDR%20Cover.png?raw=true "Crytek Sponza Rendered using Forward+")
 
 ## Video Demo
 
@@ -27,13 +27,13 @@ There are three main steps in our renderer: depth prepass, light culling, and th
 
 ### Depth Prepass
 
-![](screenshots/depth buffer.png "Depth Buffer")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/depth%20buffer.png?raw=true "Depth Buffer")
 
 In the depth prepass, we write the depth values of the scene from the camera's perspective into a depth buffer. The above image shows this buffer. Objects that are closer to the camera will appear darker, while objects far away will appear increasingly white. The above debug view can be generating by compiling and running the renderer while including `#define DEPTH_DEBUG` in main.h. Note: Because we are creating the depth buffer using the camera's projection, we must linearize the depth values to get the proper results. Without doing this, the depth values will be heavily weighted to the nearest portion of the projection.
 
 ### Light Culling
 
-![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2050r%20-%20tile%208).png?raw=true "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
 The defining stage of the renderer is the light culling stage. Here, we split the screen into tiles, each 16 x 16 pixels in our implementation, and determine what lights are visible in each tile. We use a compute shader (available in OpenGL 4.3) to calculate which lights are visible. There are two implementations of this technique described in the paper, gather and scatter. We chose the gather approach.
 
@@ -49,7 +49,7 @@ A more in-depth analysis on performance related to light culling and tile size c
 
 ### Light Accumulation and Final Shading
 
-![](screenshots/Final Shading.png "Light Accumulation and Final Shading")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/Final%20Shading.png?raw=true "Light Accumulation and Final Shading")
 
 The final step is a shader that accumulates all the light contributions from the lists of visible lights we calculated per tile, and then does the final shading calculations. For each fragment, we determine which tile it belongs to, and loop through the indices stored at that tile's location in the shader storage buffer object of visible light indices. We are currently using the Blinn-Phong lighting model, but plan to make some changes here and implement different material properties to improve our render quality. We load diffuse and specular maps to define the colors of the diffuse and specular components, and use normal maps (more on that below).
 
@@ -58,20 +58,20 @@ The final step is a shader that accumulates all the light contributions from the
 ### Tangent Space Normal Mapping
 
 #### Lion Sculpture Featuring Normal Maps
-![](screenshots/Forward-Plus 2015-12-10 22-27-29-02.png "Normal Maps")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/Forward-Plus%202015-12-10%2022-27-29-02.png?raw=true "Normal Maps")
 
 #### Visualization of Lion Sculpture's Normals
-![](screenshots/Normals Debug.png "Normal Maps")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/Normals%20Debug.png?raw=true "Normal Maps")
 
 We implemented normal maps in an effort to get better visual fidelity from our scene without to much additional computational cost. Crytek's Sponza model that we are using provided normal maps for most of the objects in the scene, and we created additional ones using Photoshop from the provided diffuse texture maps. We implemented the normal maps using tangent space normal mapping as an optimization over the basic implementation. In this method we express all the normals in our normal map in tangent space, where the vectors point roughly along the positive z direction. We then transform all of our lighting vectors to this coordinate space. This allows us to always use the same normal map regardless of the object's orientation. Above you can see an example of the use of normal maps in our scene.
 
 ### High Dynamic Range Lighting using Reinhard Tone Mapping
 
 #### Sponza Scene Rendered with HDR
-![](screenshots/HDR Comp.png "Crytek Sponza Rendered with HDR")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/HDR%20Comp.png?raw=true "Crytek Sponza Rendered with HDR")
 
 #### Sponza Scene Rendered without HDR
-![](screenshots/Non HDR comp.png "Crytek Sponza Rendered without HDR")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/Non%20HDR%20comp.png?raw=true "Crytek Sponza Rendered without HDR")
 
 Adding high dynamic range lighting (HDR) to our renderer was a relatively simple task with huge benefits in image quality for our scene. Typically brightness and color values are clamped between the range of 0.0 and 1.0 when stored in the framebuffer. Our scene features many lights that are constantly overlapping, and we are frequently accumulating color values over 1.0 in our accumulation shading step. Since the framebuffer caps these values at 1.0, we lose all the intensity of those lights. For HDR we render our scene into a floating point framebuffer, which doesn't clamp our color range. Then, in a new HDR shader program, we perform Reinhard tone mapping, which converts the unbounded color variables back to a range of 0.0 - 1.0 which the computer display requires, but in a way that retains the detail we captured in the floating point framebuffer.
 
@@ -82,7 +82,7 @@ Adding high dynamic range lighting (HDR) to our renderer was a relatively simple
 In the a traditional forward renderer, for each fragment we calculate the light contribution from each light in the scene. This is essentially like the culling stage of our Forward+ renderer failing to cull any lights from any of the tiles. We see a massive performance gain when using the Forward+ technique vs. the Forward one. With 1024 lights in the scene (our maximum), a light radius of 10, tile size of 16 pixels squared, and 1080p resolution, we were able to achieve an average frame rate of 89.867 frames per second over our 60 second benchmark. Rendering the same scene under the same conditions, Forward rendering only achieved an average of 1.7 frames per second. Below are two videos, one for the Forward renderer and the other for the Forward+, running our benchmark. The Forward+ is able to handle rendering the scene with ease, while the Forward renderer resembles a slide show.
 
 #### Forward vs. Forward+ Rendering Frame Rate
-![](data/Frame Rates.png "Forward vs. Forward+ Rendering Frame Rate")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/data/Frame%20Rates.png?raw=true "Forward vs. Forward+ Rendering Frame Rate")
 
 #### Forward Rendering Benchmark (1024 Lights)
 <a href="https://youtu.be/Y_6BXVHb7os" target="_blank"><img src="thumbs/Forward Rendering Comparison.png" alt="Forward Rendering Comparison" width="853" height="480" border="0"/></a>
@@ -98,23 +98,23 @@ If you look closely at both sets of images you can see the differences between t
 
 #### Average Frame Rate vs. Tile Size
 
-![](data/Tile Frame Rates.png "Average Frame Rate vs. Tile Size")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/data/Tile%20Frame%20Rates.png?raw=true "Average Frame Rate vs. Tile Size")
 
 #### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 8 x 8)
 
-![](screenshots/light debug (1024 lights - 30r - 8 tile).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 8 x 8)")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2030r%20-%208%20tile).png?raw=true "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 8 x 8)")
 
 #### Lights per Tile (1024 Lights, Radius = 30, Tile Size: 16 x 16)
 
-![](screenshots/light debug (1024 lights - 30r).png "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 16 x 16)")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2030r).png?raw=true "Lights per Tile (1024 Lights, Radius = 30, Tile Size = 16 x 16)")
 
 #### Lights per Tile (1024 Lights, Radius = 50, Tile Size: 8 x 8)
 
-![](screenshots/light debug (1024 lights - 50r - tile 8).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 8 x 8)")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2050r%20-%20tile%208).png?raw=true "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 8 x 8)")
 
 #### Lights per Tile (1024 Lights, Radius = 50, Tile Size: 16 x 16)
 
-![](screenshots/light debug (1024 lights - 50r).png "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
+![](https://github.com/bcrusco/Forward-Plus-Renderer/blob/master/screenshots/light%20debug%20(1024%20lights%20-%2050r).png?raw=true "Lights per Tile (1024 Lights, Radius = 50, Tile Size = 16 x 16)")
 
 ## Future Work
 
